@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,7 +16,7 @@ public class DecisionTree {
    static String curDir;
    static HashMap<Integer, HashMap<Integer, Float>> hashData;
    static int noFeatures;
-   static int depth_limit = 10;
+   static int depth_limit = 50;
    
    public static void init(){
 	   curDir = System.getProperty("user.dir");
@@ -160,7 +161,7 @@ public class DecisionTree {
 			 
 			 node_gini = list_node_gini.get(0);
 			 
-			 if(node_gini <= min){
+			 if(node_gini < min){
 			   min = node_gini;	
 			   split_val_index = i-1;
 			   best_split_value = split_val;
@@ -232,7 +233,7 @@ public class DecisionTree {
 	    	temp_result = getGini(listFeatLabel);   // gets gini for the given feature
 	    	gini = temp_result.get(0);
 	    	
-	    	if(gini <= min){
+	    	if(gini < min){
 	    	   min = gini;
 	    	   feature_index = i;
 	    	   split_value = temp_result.get(1);
@@ -280,6 +281,7 @@ public class DecisionTree {
 		  result.add(split_value);
 		  
 		  class_label = getClassLabel(parentFeature, st, end);
+		  
 		  result.add(class_label);
 		  result.add(feature_left_st);
 		  result.add(feature_left_end);
@@ -294,7 +296,7 @@ public class DecisionTree {
 		                           int parentFeature, float st, float end, Node node, Node parent, int depth){
 	   
 	   if(depth > depth_limit){
-		  node.label = parent.label;
+		  node.label = parent.label; // handle parent label to some class
 		  return node;
 	   }
 	   else{
@@ -303,6 +305,9 @@ public class DecisionTree {
 		  
 		  if(list.get(2) == 0 || list.get(2) == 1){
 			  new_node.label = Math.round(list.get(2)); // assign label based on st and end
+			  
+			  //if(new_node.label==0)
+				//  System.out.println("*************************Hello*********************");
 		      return new_node;
 		  }
 		  else{
@@ -314,7 +319,13 @@ public class DecisionTree {
 		    depth++;
 		    
 		    node.left = decisionTree(hashData, setVisited, parentFeature, list.get(3), list.get(4), new_node, node, depth);
+		    //if(node.left.label == 0)
+		    	//System.out.println("*************************Hello*********************");
 		    node.right = decisionTree(hashData, setVisited, parentFeature, list.get(5), list.get(6), new_node, node, depth);
+		    System.out.println("Depth: "+depth);
+		    //if(node.right.label == 0)
+		    	//System.out.println("*************************HiHiHi!!!*********************");
+		    
 		    setVisited.remove(node.featureIndex);
 		     
 		    return node;
@@ -343,26 +354,32 @@ public class DecisionTree {
 	   }
    }
    
-   public static void displayTree(Node node){
+   public static void displayTree(Node node, FileWriter fw) throws IOException{
 	   if(node == null)
 		   return;
 	   else{
+		   fw.write("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue+"\n");
+		   //if(node.label == 0)
+			   //System.out.println("**********************Hello***************************");
 		   System.out.println("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue);
-		   displayTree(node.left);
-		   displayTree(node.right);
+		   displayTree(node.left, fw);
+		   displayTree(node.right, fw);
 	   }
    }
 	
    public static void main(String[] args) throws IOException{
 	   init();
-	   String fileName = curDir+"\\demo_data1.csv";
+	   String fileName = curDir+"\\winequality-red_3.csv";
 	   readDataset(fileName, false);
+	   Node node = new Node();
 	   
 	   Set<Integer> setVisited = new HashSet<Integer>();
-	   Node node = decisionTree(hashData, setVisited, 0, Float.MIN_VALUE, Float.MAX_VALUE, new Node(), new Node(), 0);
+	   System.out.println("Decision Tree");
+	   node = decisionTree(hashData, setVisited, 0, Float.MIN_VALUE, Float.MAX_VALUE, new Node(), new Node(), 0);
 	   
-	   displayTree(node);
-	   
+	   FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\output.txt");
+	   displayTree(node, fw);
+	   fw.close();
    }
 }
 
