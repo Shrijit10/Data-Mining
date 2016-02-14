@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,18 +11,24 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
-
 
 public class DecisionTree {
    static String curDir;
-   static HashMap<Integer, HashMap<Integer, Float>> hashData;
+   static HashMap<Integer, HashMap<Integer, String>> hashData;
+   static Set<String> setLabels;
    static int noFeatures;
    static int depth_limit = 50;
+   static Node root;
+   static String criteria;
    
-   public static void init(){
+   public static void init(String measure){
 	   curDir = System.getProperty("user.dir");
-	   hashData = new HashMap<Integer, HashMap<Integer, Float>>();
+	   hashData = new HashMap<Integer, HashMap<Integer, String>>();
+	   setLabels = new HashSet<String>();
+	   root = new Node();
+	   criteria = measure;
    }
    
    public static LinkedHashSet<Integer> getVisitedFeatures(Set<Integer> setVisited, int parentFeature){
@@ -56,25 +63,71 @@ public class DecisionTree {
    	});
    }
    
-   public static int getClassLabel(int parentFeature, float st, float end){
+   public static String predictClass(Node node, String[] temp){
+	   String predict_class = node.label; 
+	   
+	   if(!predict_class.equals("-1"))
+	    	return predict_class;
+	   
+	   int feature_index = node.featureIndex;
+	   float test_feature_val = Float.parseFloat(temp[feature_index]);
+	   float train_feature_val = node.featureValue;
+	    
+	   if(test_feature_val <= train_feature_val)
+	      return predictClass(node.left, temp);
+	   else
+	      return predictClass(node.right, temp);
+	    
+	}
+   
+   public static String getClassLabel(int parentFeature, float st, float end){
+	   HashMap<String, Integer> hashLabel = new HashMap<String, Integer>(); // list label count for feature values less than split_pos
 	   int records = hashData.size();
-	   int label0 = 0;
-	   int label1 = 0;
+	   
+	   for(String s : setLabels)
+		   hashLabel.put(s, 0);
 	   
 	   for(int i=1;i<=records;i++){
-		   float val = hashData.get(i).get(parentFeature);
-		   if(val >= st && val <= end){
-			   if(hashData.get(i).get(noFeatures-1) == 0)
-				   label0++;
-			   else
-				   label1++;
-			}
+		   float val = Float.parseFloat(hashData.get(i).get(parentFeature));
+		   if(val >= st && val <= end)
+			   hashLabel.put(hashData.get(i).get(noFeatures-1)+"", hashLabel.get(hashData.get(i).get(noFeatures-1))+1);
 	   }
 
-	   if(label0 > label1)
-		   return 0;
-	   else
-		   return 1;
+	   int max_val = Integer.MIN_VALUE;
+	   String max_key = "";
+	   for(Entry<String, Integer> e : hashLabel.entrySet()){
+		   if(e.getValue() > max_val){
+			   max_val = e.getValue();
+			   max_key = e.getKey();
+		   }
+	   }
+	   
+	   return max_key;
+   }
+   
+   public static void evalTestFile(String file_name) throws Exception{
+	   BufferedReader br = new BufferedReader(new FileReader(file_name));
+	   String s="";
+	   String[] temp = null;
+	   String predict_class = "";
+	   int correct = 0;
+	   int total = 0;
+	   
+	   while((s=br.readLine())!=null){
+		   total++;
+		   temp = s.split(",");
+		   predict_class = predictClass(root, temp);
+		   
+		   String actual_class = temp[temp.length-1];
+		   if(predict_class.equals(actual_class))
+			   correct++;
+		}
+	   
+	   System.out.println("Accuracy: "+ (float)correct/total);
+	   System.out.println("Total: "+total+", Correct: "+correct);
+	   
+	   br.close();
+	   
    }
    
    public static void readDataset(String fileName, boolean hasHeader) throws IOException{
@@ -88,15 +141,18 @@ public class DecisionTree {
 	   
 	   while((s=br.readLine())!=null){
 		   records++;
-		   HashMap<Integer, Float> hash = new HashMap<Integer, Float>();
+		   HashMap<Integer, String> hash = new HashMap<Integer, String>();
  		   
 		   //System.out.println("s: "+s);
 		   temp = s.split(",");
 		   for(int i=0;i<temp.length;i++){
-			   hash.put(i, Float.parseFloat(temp[i]));
+			   hash.put(i, temp[i]);
 			}
 		   
 		   hashData.put(records, hash);
+		   if(!setLabels.contains(temp[temp.length-1])){
+			   setLabels.add(temp[temp.length-1]);
+		   }
 		   
 		}
 	   
@@ -104,123 +160,200 @@ public class DecisionTree {
 	   br.close();
 	}
    
-   public static List<Float> getNodeGini(List<FeatureLabel> listFeatLabel, float split_val){
-	   List<Integer> list1 = new ArrayList<Integer>(); // list label count for feature values less than split_pos
-	   List<Integer> list2 = new ArrayList<Integer>(); // list label count for feature values greater than split_pos
-	   List<Float> result = new ArrayList<Float>();
+   public static float computeGini(HashMap<String, Integer> hash1, HashMap<String, Integer> hash2){
+	   int totalNode1 = 0;
+	   int totalNode2 = 0;
+	   float giniNode1 = 0f;
+	   float giniNode2 = 0f;
 	   
-	   list1.add(0);  // count for NO labels
-	   list1.add(0);  // count for YES labels
+	   for(String s : setLabels){
+		  totalNode1+=hash1.get(s);
+		  totalNode2+=hash2.get(s);
+	   }
 	   
-	   list2.add(0);  // count for NO labels
-	   list2.add(0);  // count for YES labels
+	   for(String s : setLabels){
+		   giniNode1 += Math.pow((double)hash1.get(s)/totalNode1, 2);
+		   giniNode2 += Math.pow((double)hash2.get(s)/totalNode2, 2);
+       }
+	   
+	   giniNode1 = 1 - giniNode1;
+	   giniNode2 = 1 - giniNode2;
+	   
+	   float gini = (float)totalNode1/(totalNode1 + totalNode2)*giniNode1 + (float)totalNode2/(totalNode1 + totalNode2)*giniNode2;
+       return gini;
+   }
+   
+   public static float getBestMeasure(List<FeatureLabel> listFeatLabel, float split_val, String criteria){
+	   HashMap<String, Integer> hash1 = new HashMap<String, Integer>(); // list label count for feature values less than split_pos
+	   HashMap<String, Integer> hash2 = new HashMap<String, Integer>(); // list label count for feature values greater than split_pos
+	   float result = 0f;
+	   
+	   for(String s : setLabels){
+		   hash1.put(s, 0);
+		   hash2.put(s, 0);
+	   }
 	   
 	   //System.out.println("Split Val: "+split_val);
 	   
 	   for(FeatureLabel fl : listFeatLabel){
-		   if(fl.feature_val <= split_val){
-			  if(fl.label == 0)
-				  list1.set(0, list1.get(0)+1);
-			  else 	  
-				  list1.set(1, list1.get(1)+1);
-		    }
-		   else{
-			  if(fl.label == 0)
-				 list2.set(0, list2.get(0)+1);
-			  else 	  
-				 list2.set(1, list2.get(1)+1);
-		   }
+		  if(fl.feature_val <= split_val)
+			 hash1.put(fl.label, hash1.get(fl.label)+1);
+		  else
+			 hash2.put(fl.label, hash2.get(fl.label)+1);
 	   }
 	   
-	   int totalNode1 = list1.get(0)+list1.get(1); 
-	   int totalNode2 = list2.get(0)+list2.get(1);
-	   
-	   float giniNode1 = (float) (1 - Math.pow((double)list1.get(0)/totalNode1, 2) - Math.pow((double)list1.get(1)/totalNode1, 2));  
-	   float giniNode2 = (float) (1 - Math.pow((double)list2.get(0)/totalNode2, 2) - Math.pow((double)list2.get(1)/totalNode2, 2));
-	   
-	   float gini = (float)totalNode1/(totalNode1 + totalNode2)*giniNode1 + (float)totalNode2/(totalNode1 + totalNode2)*giniNode2;
-	   
-	   result.add(gini);
-	   result.add((float)totalNode1);
-	   result.add((float)totalNode1);
-	   
+	   if(criteria.equals("gini"))
+	      result = computeGini(hash1, hash2);
+	   else if(criteria.equals("info_gain"))
+		  result = computeInfoGain(hash1, hash2);
 	   
 	   return result;
    }
    
-   public static List<Float> getGini(List<FeatureLabel> listFeatLabel){
-	   List<Float> result = new ArrayList<Float>();
-	   List<Float> list_node_gini = new ArrayList<Float>();
+   public static float computeInfoGain(HashMap<String, Integer> hash1, HashMap<String, Integer> hash2){
+	   float info_gain = 0f;
+	   float entropy1 = 0f;
+	   float entropy2 = 0f;
+	   float parent_entropy = 0f;
+	   int totalNode1 = 0;
+	   int totalNode2 = 0;
+	   float prob1 = 0f;
+	   float prob2 = 0f;
+	   float prob = 0f;
 	   
-	   int prevLabel = listFeatLabel.get(0).label;
+       HashMap<String, Integer> hashParent = new HashMap<String, Integer>(); 
+	   
+	   for(Entry<String, Integer> e : hash1.entrySet()){
+		   if(hashParent.containsKey(e.getKey()))
+			   hashParent.put(e.getKey(), hashParent.get(e.getKey())+e.getValue());
+		   else
+			   hashParent.put(e.getKey(), e.getValue());
+	   }
+	   
+	   for(Entry<String, Integer> e : hash2.entrySet()){
+		   if(hashParent.containsKey(e.getKey()))
+			   hashParent.put(e.getKey(), hashParent.get(e.getKey())+e.getValue());
+		   else
+			   hashParent.put(e.getKey(), e.getValue());
+	   }
+	   
+	   for(String s : setLabels){
+		   totalNode1+=hash1.get(s);
+		   totalNode2+=hash2.get(s);
+	   }
+	   
+	   for(String s : setLabels){
+		   prob1 = (float)hash1.get(s)/totalNode1;
+		   prob2 = (float)hash2.get(s)/totalNode2;
+		   prob = (float)hashParent.get(s)/(totalNode1 + totalNode2);
+		   
+		   prob1 = prob1 == 0 ? 1:prob1;
+		   prob2 = prob2 == 0 ? 1:prob2;
+		   prob  = prob  == 0 ? 1:prob;
+		   
+		   entropy1 += prob1 * Math.log(prob1)/Math.log(2);
+		   entropy2 += prob2 * Math.log(prob2)/Math.log(2);
+		   parent_entropy += prob * Math.log(prob)/Math.log(2);
+       }
+	   
+	   float total_child_entropy = entropy1*totalNode1/(totalNode1 + totalNode2) + 
+			                       entropy2*totalNode2/(totalNode1 + totalNode2);
+	   
+	   info_gain = -1*parent_entropy - total_child_entropy;
+	   return info_gain;
+	}
+   
+   public static List<String> getGini(List<FeatureLabel> listFeatLabel){
+	   List<String> result = new ArrayList<String>();
+	   float measure = 0f;
+	   HashMap<String, Integer> hashLabel = new HashMap<String, Integer>(); // list label count for feature values less than split_pos
+	   
+	   String prevLabel = listFeatLabel.get(0).label;
 	   float prevFeatureVal = listFeatLabel.get(0).feature_val;
-	   int label1_count = 0;
-	   int label0_count = 0;
 	   float node_gini = 0.5f;
+	   float node_gain = 0f;
 	   float best_split_value = Float.MIN_VALUE;
 	   float min = Float.MAX_VALUE;
+	   float max = Float.MIN_VALUE;
 	   float split_val = Float.MIN_VALUE;
 	   int split_val_index = -1;
 	   
-	   if(listFeatLabel.get(0).label == 0)
-		   label0_count++;
-	   else
-		   label1_count++;
+	   for(String s : setLabels)
+		  hashLabel.put(s, 0);
+	   
+	   hashLabel.put(listFeatLabel.get(0).label, hashLabel.get(listFeatLabel.get(0).label)+1);
 	   
 	   for(int i=1;i<listFeatLabel.size();i++){
+		   hashLabel.put(listFeatLabel.get(i).label, hashLabel.get(listFeatLabel.get(i).label)+1);
 		   
-		   if(listFeatLabel.get(i).label == 0)
-			   label0_count++;
-		   else
-			   label1_count++;
-		   
-		   if(listFeatLabel.get(i).label != prevLabel){ //optimization to reduce no of comparisons to calculate gini
-			 split_val = (listFeatLabel.get(i).feature_val + prevFeatureVal)/2;
-			 list_node_gini = getNodeGini(listFeatLabel, split_val);   // gets gini for a node in the feature (<= 97 >)
+		   if(!listFeatLabel.get(i).label.equals(prevLabel)){ //optimization to reduce no of comparisons to calculate gini
+			  split_val = (listFeatLabel.get(i).feature_val + prevFeatureVal)/2;
+			  measure = getBestMeasure(listFeatLabel, split_val, criteria);   // gets gini for a node in the feature (<= 97 >)
 			 
-			 node_gini = list_node_gini.get(0);
-			 
-			 if(node_gini < min){
-			   min = node_gini;	
-			   split_val_index = i-1;
-			   best_split_value = split_val;
-			 }
-			  
-		  }
+			  if(criteria.equals("gini")){
+			    node_gini = measure;
+			    
+			    if(node_gini < min){
+				   min = node_gini;	
+				   split_val_index = i-1;
+				   best_split_value = split_val;
+				}
+			  }
+			  else if(criteria.equals("info_gain")){
+				node_gain = measure;
+				
+				if(node_gain > max){
+				   max = node_gain;	
+				   split_val_index = i-1;
+				   best_split_value = split_val;
+			    }
+			  }
+		   }
 		   
 		   prevLabel = listFeatLabel.get(i).label;
 		   prevFeatureVal = listFeatLabel.get(i).feature_val;
 	   }
 	   
-	   result.add(min);
-	   result.add(best_split_value);
-	   result.add((float)split_val_index);
+	   if(criteria.equals("gini"))
+	      result.add(min+"");
+	   else if(criteria.equals("info_gain"))
+		  result.add(max+"");
+	   
+	   result.add(best_split_value+"");
+	   result.add(split_val_index+"");
 	   
 	   if(split_val_index == -1){
-		   result.set(0, 0f);
-		   if(label0_count > label1_count)
-			   result.add(0f);
-		   else
-			   result.add(1f);
+		   result.set(0, "0");
+		   
+		   int max_val = Integer.MIN_VALUE;
+		   String max_key = "";
+		   for(Entry<String, Integer> e : hashLabel.entrySet()){
+			   if(e.getValue() > max_val){
+				   max_val = e.getValue();
+				   max_key = e.getKey();
+			   }
+		   }
+		   
+		   result.add(max_key);
 	   }
 	   else
-		   result.add(-1f);
+		   result.add("-1");
 	   
 	   return result;
 	   
    }
    
-   public static List<Float> getBestSplit(HashMap<Integer, HashMap<Integer, Float>> hashData, int parentFeature, 
+   public static List<String> getBestSplit(HashMap<Integer, HashMap<Integer, String>> hashData, int parentFeature, 
 		                                  float st, float end, Set<Integer> setVisited){
-	   List<Float> result = new ArrayList<Float>();
-	   List<Float> temp_result = new ArrayList<Float>();
+	   List<String> result = new ArrayList<String>();
+	   List<String> temp_result = new ArrayList<String>();
 	   int records = hashData.size();
 	   int split_val_index = -1;
 	   int feature_index = 0;   // class label for parent node remaining
 	   float min = Integer.MAX_VALUE;
 	   float gini = 0.5f;
 	   float split_value = Float.MIN_VALUE;
-	   float class_label = -1f;
+	   String class_label = "-1";
 	   float feature_left_st = Float.MIN_VALUE;
 	   float feature_left_end = Float.MAX_VALUE;
 	   float feature_right_st = Float.MIN_VALUE;
@@ -234,29 +367,29 @@ public class DecisionTree {
 		    
 	    	for(int j=1;j<=records;j++){
 	    	   if(st==Float.MIN_VALUE && end == Float.MAX_VALUE){
-	    		  int label = Math.round(hashData.get(j).get(noFeatures-1)); 
-	    		  listFeatLabel.add(new FeatureLabel(hashData.get(j).get(i), label));
+	    		  String label = hashData.get(j).get(noFeatures-1)+""; 
+	    		  listFeatLabel.add(new FeatureLabel(Float.parseFloat(hashData.get(j).get(i)), label));
 	    	   }
 	    	   else{
-	    		   float parentFeatVal = hashData.get(j).get(parentFeature);
+	    		   float parentFeatVal = Float.parseFloat(hashData.get(j).get(parentFeature));
 	    		   
 	    		   if(parentFeatVal >= st && parentFeatVal <= end){
-	    			  int label = Math.round(hashData.get(j).get(noFeatures-1)); 
-	 	    		  listFeatLabel.add(new FeatureLabel(hashData.get(j).get(i), label));
+	    			  String label = hashData.get(j).get(noFeatures-1)+""; 
+	 	    		  listFeatLabel.add(new FeatureLabel(Float.parseFloat(hashData.get(j).get(i)), label));
 	    		   }
 	    	   }
-	         }
+	        }
 	    	
 	    	sortFeatureLabel(listFeatLabel);
 	    	
 	    	temp_result = getGini(listFeatLabel);   // gets gini for the given feature
-	    	gini = temp_result.get(0);
+	    	gini = Float.parseFloat(temp_result.get(0));
 	    	
 	    	if(gini < min){
 	    	   min = gini;
 	    	   feature_index = i;
-	    	   split_value = temp_result.get(1);
-	    	   split_val_index = Math.round(temp_result.get(2));
+	    	   split_value = Float.parseFloat(temp_result.get(1));
+	    	   split_val_index = Integer.parseInt(temp_result.get(2));
 	    	   
 	    	   feature_left_st = listFeatLabel.get(0).feature_val;
 	    	   
@@ -275,7 +408,7 @@ public class DecisionTree {
 	    		}
 	    	   
 	    	   
-	    	   split_val_index = Math.round(temp_result.get(2));
+	    	   split_val_index = Integer.parseInt(temp_result.get(2));
 	    	   class_label = temp_result.get(3);  // parent class label
 	    	}
 	    	
@@ -285,33 +418,31 @@ public class DecisionTree {
 	   
 	   //System.out.println("Visited Index: "+feature_index+", Split Val: "+split_value+", Class: "+class_label);
 	   if(flag){
-	     //setVisited.add(feature_index);
-	   
-	     result.add((float)feature_index);
-	     result.add(split_value);
+	     result.add(feature_index+"");
+	     result.add(split_value+"");
 	     result.add(class_label);
-	     result.add(feature_left_st);
-	     result.add(feature_left_end);
-	     result.add(feature_right_st);
-	     result.add(feature_right_end);
+	     result.add(feature_left_st+"");
+	     result.add(feature_left_end+"");
+	     result.add(feature_right_st+"");
+	     result.add(feature_right_end+"");
 	   }
 	   else{
-		  result.add((float)parentFeature);
-		  result.add(split_value);
+		  result.add(parentFeature+"");
+		  result.add(split_value+"");
 		  
 		  class_label = getClassLabel(parentFeature, st, end);
 		  
 		  result.add(class_label);
-		  result.add(feature_left_st);
-		  result.add(feature_left_end);
-		  result.add(feature_right_st);
-		  result.add(feature_right_end);
+		  result.add(feature_left_st+"");
+		  result.add(feature_left_end+"");
+		  result.add(feature_right_st+"");
+		  result.add(feature_right_end+"");
 	   }
 		   
 	   return result;
    }
    
-   public static Node decisionTree(HashMap<Integer, HashMap<Integer, Float>> hashData, Set<Integer> setVisited,
+   public static Node decisionTree(HashMap<Integer, HashMap<Integer, String>> hashData, Set<Integer> setVisited,
 		                           int parentFeature, float st, float end, Node node, Node parent, int depth){
 	   
 	   if(depth > depth_limit){
@@ -320,33 +451,32 @@ public class DecisionTree {
 	   }
 	   else{
 	      Node new_node = new Node();
-		  List<Float> list = getBestSplit(hashData, parentFeature, st, end, setVisited);
+		  List<String> list = getBestSplit(hashData, parentFeature, st, end, setVisited);
 		 
-		  //setVisited.add(Math.round(list.get(0)));
-		  
-		  if(list.get(2) == 0 || list.get(2) == 1){
-			  new_node.label = Math.round(list.get(2)); // assign label based on st and end
+		  if(setLabels.contains(list.get(2))){
+			  new_node.label = list.get(2); // assign label based on st and end
 		      return new_node;
 		  }
 		  else{
-		    node.featureIndex = Math.round(list.get(0)); // child feature index
-		    node.featureValue = list.get(1); // child feature value
-		    node.label = Math.round(list.get(2));
+			int feature_index = Integer.parseInt(list.get(0));
+		    node.featureIndex = feature_index; // child feature index
+		    node.featureValue = Float.parseFloat(list.get(1)); // child feature value
+		    node.label = list.get(2);
 		    
-		    setVisited.add(Math.round(list.get(0)));
-		    
-		    parentFeature = Math.round(list.get(0));
+		    setVisited.add(feature_index);
 		    depth++;
 		    
-		    //displaySetVisited(setVisited);
+		    node.left = decisionTree(hashData, setVisited, feature_index, Float.parseFloat(list.get(3)), 
+		    		                 Float.parseFloat(list.get(4)), new_node, node, depth);
 		    
-		    node.left = decisionTree(hashData, setVisited, parentFeature, list.get(3), list.get(4), new_node, node, depth);
 		    setVisited = getVisitedFeatures(setVisited, node.featureIndex);
-		    node.right = decisionTree(hashData, setVisited, parentFeature, list.get(5), list.get(6), new_node, node, depth);
+		    
+		    node.right = decisionTree(hashData, setVisited, feature_index, Float.parseFloat(list.get(5)), 
+		    		                 Float.parseFloat(list.get(6)), new_node, node, depth);
 		     
 		    return node;
 		  }
-	    }
+	   }
    }
    
    public static void displayAllRecords(){
@@ -357,7 +487,7 @@ public class DecisionTree {
 		 Integer key = it.next();  
 		 System.out.println("Outer key: "+key);
 		 
-	     HashMap<Integer, Float> hash = hashData.get(key);
+	     HashMap<Integer, String> hash = hashData.get(key);
 	     
 	     Set<Integer> set1 = hash.keySet();
 	     Iterator<Integer> it1 = set1.iterator();
@@ -390,26 +520,43 @@ public class DecisionTree {
 	   }
    }
 	
-   public static void main(String[] args) throws IOException{
-	   init();
-	   String fileName = curDir+"\\winequality-red_3.csv";
+   public static void main(String[] args) throws Exception{
+	   BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+	   System.out.println("Please enter 1 for Gini, 2 for Info Gain measure: ");
+	   
+	   String criteria = br.readLine();
+	   if(!criteria.equals("1") && !criteria.equals("2")){
+		   System.out.println("Invalid option...Aborting...");
+		   return;
+	   }
+	   
+	   if(criteria.equals("1"))
+	      criteria = "gini";
+	   else
+		  criteria = "info_gain";
+	   
+	   init(criteria);
+	   String fileName = curDir+"\\demo_data.csv";
 	   readDataset(fileName, false);
-	   Node node = new Node();
 	   
 	   Set<Integer> setVisited = new LinkedHashSet<Integer>();
 	   System.out.println("Decision Tree");
-	   node = decisionTree(hashData, setVisited, 0, Float.MIN_VALUE, Float.MAX_VALUE, new Node(), new Node(), 0);
+	   root = decisionTree(hashData, setVisited, 0, Float.MIN_VALUE, Float.MAX_VALUE, new Node(), new Node(), 0);
 	   
 	   FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\output.txt");
-	   displayTree(node, fw);
+	   displayTree(root, fw);
 	   fw.close();
+	   
+	   String test_file = "demo_data_test.csv";
+	   String path = curDir+"\\"+test_file;
+	   evalTestFile(path);
    }
 }
 
 class Node{
 	int featureIndex;
 	float featureValue;
-	int label;
+	String label;
 	Node left;
 	Node right;
 	
@@ -426,9 +573,9 @@ class Node{
 
 class FeatureLabel{
 	float feature_val;
-	int label;
+	String label;
 	
-	FeatureLabel(float feature_val, int label){
+	FeatureLabel(float feature_val, String label){
 		this.feature_val = feature_val;
 		this.label = label;
 	}
