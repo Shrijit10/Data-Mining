@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -21,6 +22,24 @@ public class DecisionTree {
    public static void init(){
 	   curDir = System.getProperty("user.dir");
 	   hashData = new HashMap<Integer, HashMap<Integer, Float>>();
+   }
+   
+   public static LinkedHashSet<Integer> getVisitedFeatures(Set<Integer> setVisited, int parentFeature){
+	   Iterator<Integer> it = setVisited.iterator();
+	   LinkedHashSet<Integer> result = new LinkedHashSet<Integer>();
+	   
+	   while(it.hasNext()){
+		   int feature = it.next();
+		   
+		   if(feature != parentFeature)
+		      result.add(feature);
+		   else{
+			   result.add(feature);
+			   break;
+		   }
+	   }
+	   
+	   return result;
    }
    
    public static void sortFeatureLabel(List<FeatureLabel> listFeatLabel){
@@ -51,8 +70,8 @@ public class DecisionTree {
 				   label1++;
 			}
 	   }
-	   
-	   if(label0 >= label1)
+
+	   if(label0 > label1)
 		   return 0;
 	   else
 		   return 1;
@@ -266,7 +285,7 @@ public class DecisionTree {
 	   
 	   //System.out.println("Visited Index: "+feature_index+", Split Val: "+split_value+", Class: "+class_label);
 	   if(flag){
-	     setVisited.add(feature_index);
+	     //setVisited.add(feature_index);
 	   
 	     result.add((float)feature_index);
 	     result.add(split_value);
@@ -302,12 +321,11 @@ public class DecisionTree {
 	   else{
 	      Node new_node = new Node();
 		  List<Float> list = getBestSplit(hashData, parentFeature, st, end, setVisited);
+		 
+		  //setVisited.add(Math.round(list.get(0)));
 		  
 		  if(list.get(2) == 0 || list.get(2) == 1){
 			  new_node.label = Math.round(list.get(2)); // assign label based on st and end
-			  
-			  //if(new_node.label==0)
-				//  System.out.println("*************************Hello*********************");
 		      return new_node;
 		  }
 		  else{
@@ -315,18 +333,16 @@ public class DecisionTree {
 		    node.featureValue = list.get(1); // child feature value
 		    node.label = Math.round(list.get(2));
 		    
+		    setVisited.add(Math.round(list.get(0)));
+		    
 		    parentFeature = Math.round(list.get(0));
 		    depth++;
 		    
-		    node.left = decisionTree(hashData, setVisited, parentFeature, list.get(3), list.get(4), new_node, node, depth);
-		    //if(node.left.label == 0)
-		    	//System.out.println("*************************Hello*********************");
-		    node.right = decisionTree(hashData, setVisited, parentFeature, list.get(5), list.get(6), new_node, node, depth);
-		    System.out.println("Depth: "+depth);
-		    //if(node.right.label == 0)
-		    	//System.out.println("*************************HiHiHi!!!*********************");
+		    //displaySetVisited(setVisited);
 		    
-		    setVisited.remove(node.featureIndex);
+		    node.left = decisionTree(hashData, setVisited, parentFeature, list.get(3), list.get(4), new_node, node, depth);
+		    setVisited = getVisitedFeatures(setVisited, node.featureIndex);
+		    node.right = decisionTree(hashData, setVisited, parentFeature, list.get(5), list.get(6), new_node, node, depth);
 		     
 		    return node;
 		  }
@@ -354,13 +370,20 @@ public class DecisionTree {
 	   }
    }
    
+   public static void displaySetVisited(Set<Integer> setVisited){
+	   Iterator<Integer> it = setVisited.iterator();
+	   
+	   while(it.hasNext()){
+		   System.out.println("Feature: "+it.next());
+	   }
+   }
+   
    public static void displayTree(Node node, FileWriter fw) throws IOException{
 	   if(node == null)
 		   return;
 	   else{
 		   fw.write("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue+"\n");
-		   //if(node.label == 0)
-			   //System.out.println("**********************Hello***************************");
+		   
 		   System.out.println("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue);
 		   displayTree(node.left, fw);
 		   displayTree(node.right, fw);
@@ -373,7 +396,7 @@ public class DecisionTree {
 	   readDataset(fileName, false);
 	   Node node = new Node();
 	   
-	   Set<Integer> setVisited = new HashSet<Integer>();
+	   Set<Integer> setVisited = new LinkedHashSet<Integer>();
 	   System.out.println("Decision Tree");
 	   node = decisionTree(hashData, setVisited, 0, Float.MIN_VALUE, Float.MAX_VALUE, new Node(), new Node(), 0);
 	   
