@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -16,7 +18,12 @@ public class EvaluateDecisionTree {
   
   public static void buildDecisionTree(){
 	  Set<Integer> setVisited = new LinkedHashSet<Integer>();
-	  DecisionTree.root = DecisionTree.decisionTree(DecisionTree.hashData, setVisited, 0, 
+	  Set<Integer> setValidRecords = new HashSet<Integer>();
+	   
+	  for(int i=1;i<=DecisionTree.hashData.size();i++)
+		   setValidRecords.add(i);
+	   
+	  DecisionTree.root = DecisionTree.decisionTree(DecisionTree.hashData, setVisited, 0, setValidRecords,
 			                                        Float.MIN_VALUE, Float.MAX_VALUE, new Node(), new Node(), 0);
   }
   
@@ -81,7 +88,7 @@ public class EvaluateDecisionTree {
 	 String curDir = CrossValidation.curDir;
 	 int k = CrossValidation.k;
 	 
-	 String filename = "winequality-red_3.csv";  // change filenames to 10 different datasets
+	 String filename = "iris.csv";  // change filenames to 10 different datasets
 	 int pos = filename.lastIndexOf(".");
 	 String ext = filename.substring(pos);
 	 String path = curDir+"\\"+filename;
@@ -92,11 +99,17 @@ public class EvaluateDecisionTree {
 	 for(int i=1;i<=k;i++){
 		CrossValidation.generatePartitions(i, records, ext);
 	    
-		path = curDir+"\\"+"train"+i+"ext";
+		path = curDir+"\\"+"train"+i+ext;
 		DecisionTree.readDataset(path, false);
 		
+		System.out.println("Building tree");
 		buildDecisionTree();
 		
+		//FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\output.txt");
+		//DecisionTree.displayTree(DecisionTree.root, fw);
+		//fw.close();
+		
+		System.out.println("Evaluating file");
 		path = curDir+"\\"+"test"+i+ext;
 	    evalTestFile(path);
 	 }
