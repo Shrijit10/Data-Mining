@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -16,7 +17,7 @@ public class EvaluateDecisionTree {
 	  DecisionTree.init(criteria);
   }
   
-  public static void buildDecisionTree(){
+  public static void buildDecisionTree() throws IOException{
 	  Set<Integer> setVisited = new LinkedHashSet<Integer>();
 	  Set<Integer> setValidRecords = new HashSet<Integer>();
 	   
@@ -24,7 +25,7 @@ public class EvaluateDecisionTree {
 		   setValidRecords.add(i);
 	   
 	  DecisionTree.root = DecisionTree.decisionTree(DecisionTree.hashData, setVisited, 0, setValidRecords,
-			                                        Float.MIN_VALUE, Float.MAX_VALUE, new Node(), new Node(), 0);
+			                                        Float.MIN_VALUE, Float.MAX_VALUE, DecisionTree.root, 0);
   }
   
   public static String predictClass(Node node, String[] temp){
@@ -88,7 +89,7 @@ public class EvaluateDecisionTree {
 	 String curDir = CrossValidation.curDir;
 	 int k = CrossValidation.k;
 	 
-	 String filename = "iris.csv";  // change filenames to 10 different datasets
+	 String filename = "winequality-red.csv";  // change filenames to 10 different datasets
 	 int pos = filename.lastIndexOf(".");
 	 String ext = filename.substring(pos);
 	 String path = curDir+"\\"+filename;
@@ -109,8 +110,9 @@ public class EvaluateDecisionTree {
 		//DecisionTree.displayTree(DecisionTree.root, fw);
 		//fw.close();
 		
-		System.out.println("Evaluating file");
 		path = curDir+"\\"+"test"+i+ext;
+		System.out.println("Evaluating file: "+path);
+		
 	    evalTestFile(path);
 	 }
 	 

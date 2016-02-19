@@ -19,7 +19,7 @@ public class DecisionTree {
    static HashMap<Integer, HashMap<Integer, String>> hashData;
    static Set<String> setLabels;
    static int noFeatures;
-   static int depth_limit = 50;
+   static int depth_limit = 10;
    static Node root;
    static String criteria;
    
@@ -295,7 +295,7 @@ public class DecisionTree {
 	   
 	   String prevLabel = listFeatLabel.get(0).label;
 	   float prevFeatureVal = listFeatLabel.get(0).feature_val;
-	   float node_gini = 0.5f;
+	   float node_gini = 1f;
 	   float node_gain = 0f;
 	   float best_split_value = Float.MIN_VALUE;
 	   float min = Float.MAX_VALUE;
@@ -369,7 +369,7 @@ public class DecisionTree {
    }
    
    public static List<String> getBestSplit(HashMap<Integer, HashMap<Integer, String>> hashData, int parentFeature, 
-		                                  Set<Integer> setValidRecords, float st, float end, Set<Integer> setVisited){
+		                                  Set<Integer> setValidRecords, float st, float end, Set<Integer> setVisited, int depth){
 	   List<String> result = new ArrayList<String>();
 	   List<String> temp_result = new ArrayList<String>();
 	   List<String> list_left_record_no = new ArrayList<String>();
@@ -378,7 +378,7 @@ public class DecisionTree {
 	   int split_val_index = -1;
 	   int feature_index = 0;   // class label for parent node remaining
 	   float min = Integer.MAX_VALUE;
-	   float gini = 0.5f;
+	   float gini = 1f;
 	   float split_value = Float.MIN_VALUE;
 	   String class_label = "-1";
 	   float feature_left_st = Float.MIN_VALUE;
@@ -466,6 +466,11 @@ public class DecisionTree {
 	     result.add(feature_right_st+"");
 	     result.add(feature_right_end+"");
 	     
+	     if(depth > depth_limit){
+	    	 class_label = getClassLabel(parentFeature, st, end, setValidRecords);
+	    	 result.set(2, class_label);
+	     }
+	     
 	   }
 	   else{
 		  result.add(parentFeature+"");
@@ -488,20 +493,20 @@ public class DecisionTree {
    }
    
    public static Node decisionTree(HashMap<Integer, HashMap<Integer, String>> hashData, Set<Integer> setVisited,
-		                           int parentFeature,Set<Integer> setValidRecords, float st, float end, Node node, Node parent, int depth){
+		                           int parentFeature,Set<Integer> setValidRecords, float st, float end, Node node, int depth) throws IOException{
 	   
-	   if(depth > depth_limit){
-		  node.label = parent.label; // handle parent label to some class
+	   /*if(depth > depth_limit){
+		  //node.label = parent.label; // handle parent label to some class
 		  return node;
 	   }
-	   else{
+	   else{*/
 	      Node new_node = new Node();
-		  List<String> list = getBestSplit(hashData, parentFeature, setValidRecords, st, end, setVisited);
+		  List<String> list = getBestSplit(hashData, parentFeature, setValidRecords, st, end, setVisited, depth);
 		  List<Set<Integer>> list_sets = getValidRecords(list);
 		  Set<Integer> setLeftValidRecords = list_sets.get(0);
 		  Set<Integer> setRightValidRecords = list_sets.get(1);
 		  
-		  if(setLabels.contains(list.get(2))){
+		  if(setLabels.contains(list.get(2)) || depth > depth_limit){
 			  new_node.label = list.get(2); // assign label based on st and end
 		      return new_node;
 		  }
@@ -514,21 +519,30 @@ public class DecisionTree {
 		    setVisited.add(feature_index);
 		    depth++;
 		    
-		    //System.out.println("Left Set");
-		    //displaySet(setLeftValidRecords); 
+		    //System.out.println("****************************************");
+		    //System.out.println("Before Left: Parent: "+parentFeature);
+		    //displayTree(node, null);
+		    
 		    node.left = decisionTree(hashData, setVisited, feature_index, setLeftValidRecords, Float.parseFloat(list.get(3)), 
-		    		                 Float.parseFloat(list.get(4)), new_node, node, depth);
+		    		                 Float.parseFloat(list.get(4)), new_node, depth);
 		    
 		    setVisited = getVisitedFeatures(setVisited, node.featureIndex);
 		    
-		    //System.out.println("Right Set");
-		    //displaySet(setRightValidRecords);
+		    //System.out.println("****************************************");
+		    //System.out.println("After Left: Parent: "+parentFeature);
+		    //displayTree(node, null);
+		    
+		    new_node = new Node();
 		    node.right = decisionTree(hashData, setVisited, feature_index, setRightValidRecords, Float.parseFloat(list.get(5)), 
-		    		                 Float.parseFloat(list.get(6)), new_node, node, depth);
+		    		                 Float.parseFloat(list.get(6)), new_node, depth);
 		     
+		    //System.out.println("****************************************");
+		    //System.out.println("After Right: Parent: "+parentFeature);
+		    //displayTree(node, null);
+		    
 		    return node;
 		  }
-	   }
+	   //}
    }
    
    public static void displaySet(Set<Integer> set){
@@ -570,7 +584,8 @@ public class DecisionTree {
 	   if(node == null)
 		   return;
 	   else{
-		   fw.write("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue+"\n");
+		   if(fw!=null)
+		     fw.write("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue+"\n");
 		   
 		   System.out.println("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue);
 		   displayTree(node.left, fw);
@@ -594,7 +609,7 @@ public class DecisionTree {
 		  criteria = "info_gain";
 	   
 	   init(criteria);
-	   String fileName = curDir+"\\iris.csv";
+	   String fileName = curDir+"\\winequality-red.csv";
 	   readDataset(fileName, false);
 	   
 	   Set<Integer> setVisited = new LinkedHashSet<Integer>();
@@ -606,13 +621,15 @@ public class DecisionTree {
 	   
 	   System.out.println("Decision Tree");
 	   
-	   root = decisionTree(hashData, setVisited, 0, setValidRecords, Float.MIN_VALUE, Float.MAX_VALUE, new Node(), new Node(), 0);
+	   root = decisionTree(hashData, setVisited, -1, setValidRecords, Float.MIN_VALUE, Float.MAX_VALUE, root, 0);
 	   
 	   FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\output.txt");
+	   
+	   //System.out.println("******************** Final Tree *****************************");
 	   displayTree(root, fw);
 	   fw.close();
 	   
-	   //String test_file = "demo_data_test.csv";
+	   //String test_file = "test3.csv";
 	   //String path = curDir+"\\"+test_file;
 	   //evalTestFile(path);
    }
