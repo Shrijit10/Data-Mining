@@ -27,7 +27,7 @@ public class DecisionTree {
 	   curDir = System.getProperty("user.dir");
 	   hashData = new HashMap<Integer, HashMap<Integer, String>>();
 	   setLabels = new HashSet<String>();
-	   root = new Node();
+	   root = new Node();	   
 	   criteria = measure;
    }
    
@@ -105,13 +105,13 @@ public class DecisionTree {
 	   return max_key;
    }
    
-   public static List<Set<Integer>> getValidRecords(List<String> list){
+   public static List<Set<Integer>> getValidRecords(List<String> list, int st){
 	   Set<Integer> setLeft = new HashSet<Integer>();
 	   Set<Integer> setRight = new HashSet<Integer>();
 	   List<Set<Integer>> result = new ArrayList<Set<Integer>>();
 	   
 	   int i=0;
-	   for(i=7;i<list.size();i++){
+	   for(i=st;i<list.size();i++){
 		  if(list.get(i).equals(""))
 			 break;   
 		  else
@@ -502,7 +502,7 @@ public class DecisionTree {
 	   else{*/
 	      Node new_node = new Node();
 		  List<String> list = getBestSplit(hashData, parentFeature, setValidRecords, st, end, setVisited, depth);
-		  List<Set<Integer>> list_sets = getValidRecords(list);
+		  List<Set<Integer>> list_sets = getValidRecords(list, 7);
 		  Set<Integer> setLeftValidRecords = list_sets.get(0);
 		  Set<Integer> setRightValidRecords = list_sets.get(1);
 		  
@@ -609,7 +609,7 @@ public class DecisionTree {
 		  criteria = "info_gain";
 	   
 	   init(criteria);
-	   String fileName = curDir+"\\winequality-red.csv";
+	   String fileName = curDir+"\\iris.csv";
 	   readDataset(fileName, false);
 	   
 	   Set<Integer> setVisited = new LinkedHashSet<Integer>();
@@ -647,9 +647,21 @@ class Node{
 		featureValue = Float.MIN_VALUE;
 	}
 	
+	Node(int index, float value, Node left, Node right, String label){
+		this.featureIndex = index;
+		this.featureValue = value;
+		this.left = left;
+		this.right = right;
+		this.label = label;
+	}
+	
 	Node(int index, float value){
 		this.featureIndex = index;
 		this.featureValue = value;
+	}
+	
+	Node(Node n){
+		this(n.featureIndex, n.featureValue, n.left, n.right, n.label);
 	}
 }
 
