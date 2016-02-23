@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -14,16 +15,29 @@ import java.util.Set;
 
 
 public class CombinedBeamSearch {
-	static List<NodeDetails> listNodeDetails;
+	static List<BeamNodeDetails> listNodeDetails;
 	static int m;
+	static BeamNode root;
 	
-	public static void init(String criteria, int noTrees){
+	public static void init(String criteria, int noTrees, int k){
 		m = noTrees;
-		listNodeDetails = new ArrayList<NodeDetails>();
+		listNodeDetails = new ArrayList<BeamNodeDetails>();
 		DecisionTree.init(criteria);
+		CrossValidation.init(k);
 		
 		for(int i=0;i<m;i++){
-		   listNodeDetails.add(new NodeDetails());
+		   listNodeDetails.add(new BeamNodeDetails());
+		}
+	}
+	
+	public static void displayBeamTree(BeamNode node){
+		if(node == null)
+			return;
+		else{
+			System.out.println("Class: "+node.sd.class_label+", Index: "+node.sd.feature_index+
+					           ", Split Value: "+node.sd.split_value);
+			displayBeamTree(node.left);
+			displayBeamTree(node.right);
 		}
 	}
 	
@@ -34,17 +48,17 @@ public class CombinedBeamSearch {
 		return node.sd.gini + getOverallGini(node.left) + getOverallGini(node.right);
 	}
 	
-	public static void compareTrees(List<NodeDetails> list_node_details){
-		for(NodeDetails node : list_node_details){
+	public static void compareTrees(List<BeamNodeDetails> list_node_details){
+		for(BeamNodeDetails node : list_node_details){
 			BeamNode beam_node = node.beam_node;
 			
 			float total_gini = getOverallGini(beam_node);
 			node.total_gini = total_gini;
 		}
 		
-		Collections.sort(list_node_details, new Comparator<NodeDetails>(){
+		Collections.sort(list_node_details, new Comparator<BeamNodeDetails>(){
 			@Override
-			public int compare(NodeDetails n1, NodeDetails n2){
+			public int compare(BeamNodeDetails n1, BeamNodeDetails n2){
 				if(n1.total_gini == n2.total_gini)
 					return 0;
 				else if(n1.total_gini < n2.total_gini)
@@ -101,8 +115,11 @@ public class CombinedBeamSearch {
  	   class_label = split_result.get(3);  // parent class label
  	   gini = Float.parseFloat(split_result.get(0));
 	     
+ 	   List<String> list_class_dtls = new ArrayList<String>();
+ 	   
 	   if(depth > DecisionTree.depth_limit){
-	      class_label = DecisionTree.getClassLabel(parentFeature, st, end, setValidRecords);
+		  list_class_dtls = DecisionTree.getClassLabel(parentFeature, st, end, setValidRecords);
+	      class_label = list_class_dtls.get(0);
 	      result.set(2, class_label);
 	   }
 	   
@@ -157,8 +174,8 @@ public class CombinedBeamSearch {
 				  if(node.right == null)
 				     return new TargetBeamNode(node, 1);
 				  
-				  queue.add(beam_node.left);
-				  queue.add(beam_node.right);
+				  queue.add(node.left);
+				  queue.add(node.right);
 			   }
 			}
 		   
@@ -182,6 +199,41 @@ public class CombinedBeamSearch {
 			boolean b2 = attachToTarget(node.right, target, new_node, direction);
 		
 		    return b1 || b2;
+		}
+	}
+	
+	
+	public static void populateVisitedFeatures(BeamNode node, Set<Integer> set){
+		if(node == null)
+		   return;
+		else{
+			set.add(node.sd.feature_index);
+			populateVisitedFeatures(node.left, set);
+			populateVisitedFeatures(node.right, set);
+		}
+		
+	}
+	
+	public static boolean recomputeVisited(BeamNode node, Set<Integer> setVisited, int parentFeature){
+		if(node == null){
+		   return false;	
+		}
+		else{
+			if(node.sd.feature_index == parentFeature){
+				setVisited.add(parentFeature);
+				return true;
+			}
+			else{
+				boolean b1 = recomputeVisited(node.left, setVisited, parentFeature);
+				boolean b2 = recomputeVisited(node.right, setVisited, parentFeature);
+				
+				if(b1 || b2){
+					setVisited.add(node.sd.feature_index);
+					return true;
+				}
+			}
+			
+		  return false;	
 		}
 	}
 	
@@ -252,8 +304,10 @@ public class CombinedBeamSearch {
 		}
 		   
 	   //System.out.println("Visited Index: "+feature_index+", Split Val: "+split_value+", Class: "+class_label);
+	   List<String> list_class_dtls = new ArrayList<String>();
 	   if(!flag){
-		  class_label = DecisionTree.getClassLabel(parentFeature, st, end, setValidRecords);
+		  list_class_dtls = DecisionTree.getClassLabel(parentFeature, st, end, setValidRecords);
+		  class_label = list_class_dtls.get(0);
 		  
 		  SplitDetails sd = new SplitDetails(1f, parentFeature, split_value,         class_label, 
 				                             feature_left_st,   feature_left_end,    feature_right_st, 
@@ -271,26 +325,25 @@ public class CombinedBeamSearch {
 		List<SplitDetails> list_result = new ArrayList<SplitDetails>();
 		float st = Float.MIN_VALUE;
 		float end = Float.MAX_VALUE;
-		
-		int depth_limit = DecisionTree.depth_limit;
 		int no_features = DecisionTree.noFeatures;
 		int depth = -1;
 		int count = 0;
 		int parentFeature = -1;
 		
 		while(true){
-		    if(depth > depth_limit || count == m)
+		    if(count == m)
 			   break;
 		    
 			depth++;
 			count = 0;
 			
-			List<NodeDetails> temp_node_details = new ArrayList<NodeDetails>();
+			List<BeamNodeDetails> temp_node_details = new ArrayList<BeamNodeDetails>();
 			
-			for(NodeDetails node_details : listNodeDetails){
+			for(BeamNodeDetails node_details : listNodeDetails){
 				BeamNode beam_node = node_details.beam_node;
-				LinkedHashSet<Integer> setVisited = node_details.setVisited;
+				//Set<Integer> setVisited = node_details.setVisited;
 				
+				Set<Integer> setVisited = new LinkedHashSet<Integer>();  
 				TargetBeamNode target_node = searchTargetNode(beam_node);
 				Set<Integer> setValidRecords = new HashSet<Integer>();
 				
@@ -304,24 +357,26 @@ public class CombinedBeamSearch {
 				
 				if(target.sd == null)
 				   parentFeature = -1;
-				else
+				else{
 				   parentFeature = target.sd.feature_index;
+				   recomputeVisited(beam_node, setVisited, parentFeature);
+				}
 				
 				if(direction == 0){
 					st = target.sd.feature_left_st;
 					end = target.sd.feature_left_end;
-					setValidRecords = DecisionTree.getValidRecords(target.sd.list_record_no, 0).get(0);
+					setValidRecords = DecisionTree.getValidRecords(target.sd.list_record_no).get(0);
 				}
 				else if(direction == 1){
 					st = target.sd.feature_right_st;
 					end = target.sd.feature_right_end;
-					setValidRecords = DecisionTree.getValidRecords(target.sd.list_record_no, 0).get(1);
+					setValidRecords = DecisionTree.getValidRecords(target.sd.list_record_no).get(1);
 				}
 				
-				setVisited = DecisionTree.getVisitedFeatures(setVisited, parentFeature);
+				
 				list_result = getBestSplit(DecisionTree.hashData, parentFeature, setValidRecords, st, end, setVisited, depth);
 				
-				System.out.println("Set Size: "+setVisited.size());
+				//System.out.println("Set Size: "+setVisited.size());
 				for(int i=0;i<list_result.size();i++){
 					BeamNode new_node = new BeamNode();
 					
@@ -336,7 +391,7 @@ public class CombinedBeamSearch {
 					}
 					
 					BeamNode copy_node = new BeamNode(beam_node);
-					temp_node_details.add(new NodeDetails(copy_node, sd.feature_index, sd.class_label));
+					temp_node_details.add(new BeamNodeDetails(copy_node, sd.feature_index, sd.class_label));
 					
 				}
 				
@@ -348,79 +403,93 @@ public class CombinedBeamSearch {
 			
 			compareTrees(temp_node_details);
 			
-			for(int i=0;i<list_result.size();i++){
-				LinkedHashSet<Integer> set = listNodeDetails.get(i).setVisited;
+			for(int i=0;i<m;i++){
 				
-				if(!DecisionTree.setLabels.contains(temp_node_details.get(i).class_label)){
-					set.add(temp_node_details.get(i).cur_feature);
+				if(i==temp_node_details.size()){
+					break;
 				}
-				
 				listNodeDetails.set(i, temp_node_details.get(i));
-				listNodeDetails.get(i).setVisited = set;
-				
-				//System.out.println("Index: "+i+", Size: "+set.size());
-				
 			}
-			System.out.println("********************************");
+			//System.out.println("********************************");
 		}
 	}
 	
-	public static void displayBeamTree(BeamNode node){
-		if(node == null)
-			return;
-		else{
-			System.out.println("Class: "+node.sd.class_label+", Index: "+node.sd.feature_index+
-					           ", Split Value: "+node.sd.split_value);
-			displayBeamTree(node.left);
-			displayBeamTree(node.right);
+	public static String predictClass(BeamNode node, String[] temp){
+		   String predict_class = node.sd.class_label; 
+		   
+		   if(!predict_class.equals("-1"))
+		    	return predict_class;
+		   
+		   int feature_index = node.sd.feature_index;
+		   float test_feature_val = Float.parseFloat(temp[feature_index]);
+		   float train_feature_val = node.sd.split_value;
+		    
+		   if(test_feature_val <= train_feature_val)
+		      return predictClass(node.left, temp);
+		   else
+		      return predictClass(node.right, temp);
+		    
 		}
-	}
+	
+	 public static void evalTestFile(String file_name) throws Exception{
+		   BufferedReader br = new BufferedReader(new FileReader(file_name));
+		   String s="";
+		   String[] temp = null;
+		   String predict_class = "";
+		   int correct = 0;
+		   int total = 0;
+		   
+		   while((s=br.readLine())!=null){
+			   total++;
+			   temp = s.split(",");
+			   predict_class = predictClass(root, temp);
+			   
+			   String actual_class = temp[temp.length-1];
+			   if(predict_class.equals(actual_class))
+				   correct++;
+			}
+		   
+		   System.out.println("Accuracy: "+ (float)correct/total);
+		   System.out.println("Total: "+total+", Correct: "+correct);
+		   
+		   br.close();
+		   
+	   }
 	
 	public static void main(String[] args) throws Exception{
-		String criteria = "gini";		   
-	    int m = 3;
-	    init(criteria, m);
+		String criteria = "gini";	
+		int m = 3;
+	    int k = 10;
+	    init(criteria, m, k);
 	    
-	    String fileName = DecisionTree.curDir+"\\iris.csv";
+	    String curDir = CrossValidation.curDir;
+	    String fileName = curDir+"\\train6.csv";
 	    DecisionTree.readDataset(fileName, false);
 	 
-	    System.out.println("Decision Tree");
+	    //System.out.println("Decision Tree");
 	    getBestTree();
-	    
-	    for(NodeDetails node : listNodeDetails){
-	    	BeamNode root = node.beam_node;
-	    	System.out.println("***************************");
-	    	displayBeamTree(root);
-	    	System.out.println("***************************");
-	    }
-	    
-	    //DecisionTree.root = DecisionTree.decisionTree(DecisionTree.hashData, setVisited, -1, setValidRecords, Float.MIN_VALUE, Float.MAX_VALUE, DecisionTree.root, 0);
-	   
-	    FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\output.txt");
-	   
-	    //System.out.println("******************** Final Tree *****************************");
-	    //displayTree(root, fw);
-	    fw.close();
 		   
-		   //String test_file = "test3.csv";
-		   //String path = curDir+"\\"+test_file;
-		   //evalTestFile(path);
+	    root = listNodeDetails.get(0).beam_node;
+	    
+		String test_file = "test6.csv";
+		String path = curDir+"\\"+test_file;
+		evalTestFile(path);
      }
 }
 
-class NodeDetails{
+class BeamNodeDetails{
 	BeamNode beam_node;
-	LinkedHashSet<Integer> setVisited;
+	Set<Integer> setVisited;
 	float total_gini;
 	int cur_feature;
 	String class_label;
 	
-	NodeDetails(){
+	BeamNodeDetails(){
 		beam_node = new BeamNode();
 		setVisited = new LinkedHashSet<Integer>();
 	}
 	
-	NodeDetails(BeamNode node, int cur_feature, String label){
+	BeamNodeDetails(BeamNode node, int cur_feature, String label){
 		beam_node = node;
 		this.cur_feature = cur_feature;
 		class_label = label;

@@ -80,21 +80,26 @@ public class DecisionTree {
 	    
 	}
    
-   public static String getClassLabel(int parentFeature, float st, float end, Set<Integer> setValidRecords){
+   public static List<String> getClassLabel(int parentFeature, float st, float end, Set<Integer> setValidRecords){
 	   HashMap<String, Integer> hashLabel = new HashMap<String, Integer>(); // list label count for feature values less than split_pos
 	   int records = hashData.size();
+	   int count = 0;
 	   
 	   for(String s : setLabels)
 		   hashLabel.put(s, 0);
 	   
 	   for(int i=1;i<=records;i++){
 		   float val = Float.parseFloat(hashData.get(i).get(parentFeature));
-		   if(val >= st && val <= end && setValidRecords.contains(i))
+		   if(val >= st && val <= end && setValidRecords.contains(i)){
 			   hashLabel.put(hashData.get(i).get(noFeatures-1)+"", hashLabel.get(hashData.get(i).get(noFeatures-1))+1);
+		       count++;
+		   }
 	   }
 
 	   int max_val = Integer.MIN_VALUE;
 	   String max_key = "";
+	   List<String> result = new ArrayList<String>();
+	   
 	   for(Entry<String, Integer> e : hashLabel.entrySet()){
 		   if(e.getValue() > max_val){
 			   max_val = e.getValue();
@@ -102,16 +107,19 @@ public class DecisionTree {
 		   }
 	   }
 	   
-	   return max_key;
+	   result.add(max_key);
+	   result.add(count+"");
+	   result.add(max_val+"");
+	   return result;
    }
    
-   public static List<Set<Integer>> getValidRecords(List<String> list, int st){
+   public static List<Set<Integer>> getValidRecords(List<String> list){
 	   Set<Integer> setLeft = new HashSet<Integer>();
 	   Set<Integer> setRight = new HashSet<Integer>();
 	   List<Set<Integer>> result = new ArrayList<Set<Integer>>();
 	   
 	   int i=0;
-	   for(i=st;i<list.size();i++){
+	   for(i=0;i<list.size();i++){
 		  if(list.get(i).equals(""))
 			 break;   
 		  else
@@ -368,7 +376,7 @@ public class DecisionTree {
 	   
    }
    
-   public static List<String> getBestSplit(HashMap<Integer, HashMap<Integer, String>> hashData, int parentFeature, 
+   public static NodeDetails getBestSplit(HashMap<Integer, HashMap<Integer, String>> hashData, int parentFeature, 
 		                                  Set<Integer> setValidRecords, float st, float end, Set<Integer> setVisited, int depth){
 	   List<String> result = new ArrayList<String>();
 	   List<String> temp_result = new ArrayList<String>();
@@ -457,64 +465,72 @@ public class DecisionTree {
 		}
 	   
 	   //System.out.println("Visited Index: "+feature_index+", Split Val: "+split_value+", Class: "+class_label);
+	   List<String> list_class_dtls = new ArrayList<String>();
+	   int class_count = 0;
+	   
 	   if(flag){
-	     result.add(feature_index+"");
-	     result.add(split_value+"");
-	     result.add(class_label);
-	     result.add(feature_left_st+"");
-	     result.add(feature_left_end+"");
-	     result.add(feature_right_st+"");
-	     result.add(feature_right_end+"");
-	     
 	     if(depth > depth_limit){
-	    	 class_label = getClassLabel(parentFeature, st, end, setValidRecords);
-	    	 result.set(2, class_label);
-	     }
-	     
+	    	 list_class_dtls = getClassLabel(parentFeature, st, end, setValidRecords);
+	    	 class_label = list_class_dtls.get(0);
+	    	 class_count = Integer.parseInt(list_class_dtls.get(1));
+	      }
 	   }
 	   else{
-		  result.add(parentFeature+"");
-		  result.add(split_value+"");
-		  
-		  class_label = getClassLabel(parentFeature, st, end, setValidRecords);
-		  
-		  result.add(class_label);
-		  result.add(feature_left_st+"");
-		  result.add(feature_left_end+"");
-		  result.add(feature_right_st+"");
-		  result.add(feature_right_end+"");
+		  list_class_dtls =  getClassLabel(parentFeature, st, end, setValidRecords);
+		  class_label = list_class_dtls.get(0);
+	      class_count = Integer.parseInt(list_class_dtls.get(1));
 	   }
 	   
-	   result.addAll(list_left_record_no);
-	   result.add("");
-	   result.addAll(list_right_record_no);
+	   int temp_parent_feature = 0;
+	   if(parentFeature == -1)
+		  temp_parent_feature = feature_index;
+	   else
+		   temp_parent_feature = parentFeature;
+	   
+	   list_class_dtls = getClassLabel(temp_parent_feature, st, end, setValidRecords);
+	   
+	   String max_class_label = list_class_dtls.get(0);
+	   int max_class_count = Integer.parseInt(list_class_dtls.get(1));
+	   int label_count = Integer.parseInt(list_class_dtls.get(2));
+	   
+	   List<String> list_record_no = new ArrayList<String>();
+	   list_record_no.addAll(list_left_record_no);
+	   list_record_no.add("");
+	   list_record_no.addAll(list_right_record_no);
+	   
+	   NodeDetails node_details = new NodeDetails(feature_index, split_value, class_label, feature_left_st,
+                                                  feature_left_end, feature_right_st, feature_right_end, 
+                                                  list_record_no, max_class_label, max_class_count, label_count);
 		   
-	   return result;
+	   return node_details;
    }
    
    public static Node decisionTree(HashMap<Integer, HashMap<Integer, String>> hashData, Set<Integer> setVisited,
 		                           int parentFeature,Set<Integer> setValidRecords, float st, float end, Node node, int depth) throws IOException{
 	   
-	   /*if(depth > depth_limit){
-		  //node.label = parent.label; // handle parent label to some class
-		  return node;
-	   }
-	   else{*/
-	      Node new_node = new Node();
-		  List<String> list = getBestSplit(hashData, parentFeature, setValidRecords, st, end, setVisited, depth);
-		  List<Set<Integer>> list_sets = getValidRecords(list, 7);
-		  Set<Integer> setLeftValidRecords = list_sets.get(0);
-		  Set<Integer> setRightValidRecords = list_sets.get(1);
+	   Node new_node = new Node();
+	   NodeDetails nd = getBestSplit(hashData, parentFeature, setValidRecords, st, end, setVisited, depth);
+  	   List<Set<Integer>> list_sets = getValidRecords(nd.list_record_no);
+	   Set<Integer> setLeftValidRecords =  list_sets.get(0);
+	   Set<Integer> setRightValidRecords = list_sets.get(1);
 		  
-		  if(setLabels.contains(list.get(2)) || depth > depth_limit){
-			  new_node.label = list.get(2); // assign label based on st and end
-		      return new_node;
-		  }
-		  else{
-			int feature_index = Integer.parseInt(list.get(0));
+	   if(setLabels.contains(nd.class_label) || depth > depth_limit){
+	       new_node.label = nd.class_label;  // assign label based on st and end
+		   new_node.max_class_label = nd.max_class_label;
+		   new_node.max_class_count = nd.max_class_count;
+		   new_node.label_count = nd.label_count;
+	       return new_node;
+		}
+	   else{
+			int feature_index = nd.feature_index; 
 		    node.featureIndex = feature_index; // child feature index
-		    node.featureValue = Float.parseFloat(list.get(1)); // child feature value
-		    node.label = list.get(2);
+		    node.featureValue = nd.split_value;  // child feature value
+		    node.label = nd.class_label; 
+		    node.st = nd.feature_left_st;
+		    node.end = nd.feature_right_end;
+		    node.max_class_label = nd.max_class_label;
+		    node.max_class_count = nd.max_class_count;
+		    node.label_count = nd.label_count;
 		    
 		    setVisited.add(feature_index);
 		    depth++;
@@ -523,8 +539,8 @@ public class DecisionTree {
 		    //System.out.println("Before Left: Parent: "+parentFeature);
 		    //displayTree(node, null);
 		    
-		    node.left = decisionTree(hashData, setVisited, feature_index, setLeftValidRecords, Float.parseFloat(list.get(3)), 
-		    		                 Float.parseFloat(list.get(4)), new_node, depth);
+		    node.left = decisionTree(hashData, setVisited, feature_index, setLeftValidRecords, nd.feature_left_st, 
+		    		                 nd.feature_left_end, new_node, depth);
 		    
 		    setVisited = getVisitedFeatures(setVisited, node.featureIndex);
 		    
@@ -533,8 +549,8 @@ public class DecisionTree {
 		    //displayTree(node, null);
 		    
 		    new_node = new Node();
-		    node.right = decisionTree(hashData, setVisited, feature_index, setRightValidRecords, Float.parseFloat(list.get(5)), 
-		    		                 Float.parseFloat(list.get(6)), new_node, depth);
+		    node.right = decisionTree(hashData, setVisited, feature_index, setRightValidRecords, nd.feature_right_st/*Float.parseFloat(list.get(5))*/, 
+		    		                 nd.feature_right_end/*Float.parseFloat(list.get(6))*/, new_node, depth);
 		     
 		    //System.out.println("****************************************");
 		    //System.out.println("After Right: Parent: "+parentFeature);
@@ -542,7 +558,6 @@ public class DecisionTree {
 		    
 		    return node;
 		  }
-	   //}
    }
    
    public static void displaySet(Set<Integer> set){
@@ -587,7 +602,9 @@ public class DecisionTree {
 		   if(fw!=null)
 		     fw.write("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue+"\n");
 		   
-		   System.out.println("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue);
+		   System.out.println("Class: "+node.label+", Index: "+node.featureIndex+", Split Value: "+node.featureValue+
+				              ", Max Class Label: "+node.max_class_label+", Max Count: "+node.max_class_count+
+				              ", Label Count: "+node.label_count);
 		   displayTree(node.left, fw);
 		   displayTree(node.right, fw);
 	   }
@@ -620,16 +637,13 @@ public class DecisionTree {
 	   }
 	   
 	   System.out.println("Decision Tree");
-	   
 	   root = decisionTree(hashData, setVisited, -1, setValidRecords, Float.MIN_VALUE, Float.MAX_VALUE, root, 0);
 	   
 	   FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\output.txt");
-	   
-	   //System.out.println("******************** Final Tree *****************************");
 	   displayTree(root, fw);
 	   fw.close();
 	   
-	   //String test_file = "test3.csv";
+	   //String test_file = "test6.csv";
 	   //String path = curDir+"\\"+test_file;
 	   //evalTestFile(path);
    }
@@ -641,7 +655,13 @@ class Node{
 	String label;
 	Node left;
 	Node right;
-	
+	float st;
+    float end;
+    List<String> list_record_no;
+    String max_class_label;
+    int max_class_count;
+    int label_count;
+    
 	Node(){
 		featureIndex = -1;
 		featureValue = Float.MIN_VALUE;
@@ -675,4 +695,34 @@ class FeatureLabel{
 		this.feature_val = feature_val;
 		this.label = label;
 	}
+}
+
+class NodeDetails{
+	int feature_index;
+	float split_value;
+    String class_label;
+    float feature_left_st;
+    float feature_left_end;
+    float feature_right_st;
+    float feature_right_end;
+    List<String> list_record_no;
+    String max_class_label;
+    int max_class_count;
+    int label_count;
+    
+    NodeDetails(int index, float split_value, String label, float left_st, float left_end,
+    		    float right_st, float right_end, List<String> list_record_no, String max_class_label,
+    		    int max_class_count, int label_count){
+    	feature_index = index;
+    	this.split_value = split_value;
+    	class_label = label;
+    	feature_left_st = left_st;
+    	feature_left_end = left_end;
+    	feature_right_st = right_st;
+    	feature_right_end = right_end;
+    	this.list_record_no = list_record_no;
+    	this.max_class_label = max_class_label;
+    	this.max_class_count = max_class_count;
+    	this.label_count = label_count;
+    }
 }

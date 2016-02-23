@@ -9,10 +9,13 @@ import java.util.Set;
 
 
 public class EvaluateDecisionTree {
+  static String curDir;
   static int total;
   static int correct;
+  
  
   public static void init(String criteria){
+	  curDir = System.getProperty("user.dir");
 	  CrossValidation.init(10);
 	  DecisionTree.init(criteria);
   }
@@ -86,16 +89,15 @@ public class EvaluateDecisionTree {
 		 criteria = "info_gain";
 	  
 	 init(criteria); 
-	 String curDir = CrossValidation.curDir;
 	 int k = CrossValidation.k;
 	 
-	 String filename = "winequality-red.csv";  // change filenames to 10 different datasets
+	 String filename = "iris.csv";  // change filenames to 10 different datasets
 	 int pos = filename.lastIndexOf(".");
 	 String ext = filename.substring(pos);
 	 String path = curDir+"\\"+filename;
 	 
 	 CrossValidation.readDataset(path, false); 
-	  
+
 	 int records = CrossValidation.hash.size();
 	 for(int i=1;i<=k;i++){
 		CrossValidation.generatePartitions(i, records, ext);
@@ -115,9 +117,6 @@ public class EvaluateDecisionTree {
 		
 	    evalTestFile(path);
 	 }
-	 
-	 System.out.println("Total: "+total+", Correct: "+correct);
-	 System.out.println("Accuracy: "+(float)correct/total);
 	 
    }
 }
