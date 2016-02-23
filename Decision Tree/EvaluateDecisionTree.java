@@ -1,6 +1,5 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashSet;
@@ -107,10 +106,6 @@ public class EvaluateDecisionTree {
 		
 		System.out.println("Building tree");
 		buildDecisionTree();
-		
-		//FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\output.txt");
-		//DecisionTree.displayTree(DecisionTree.root, fw);
-		//fw.close();
 		
 		path = curDir+"\\"+"test"+i+ext;
 		System.out.println("Evaluating file: "+path);

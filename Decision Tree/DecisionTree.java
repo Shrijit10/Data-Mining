@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -63,7 +62,7 @@ public class DecisionTree {
    	});
    }
    
-   public static String predictClass(Node node, String[] temp){
+   /*public static String predictClass(Node node, String[] temp){
 	   String predict_class = node.label; 
 	   
 	   if(!predict_class.equals("-1"))
@@ -78,7 +77,7 @@ public class DecisionTree {
 	   else
 	      return predictClass(node.right, temp);
 	    
-	}
+	}*/
    
    public static List<String> getClassLabel(int parentFeature, float st, float end, Set<Integer> setValidRecords){
 	   HashMap<String, Integer> hashLabel = new HashMap<String, Integer>(); // list label count for feature values less than split_pos
@@ -137,7 +136,7 @@ public class DecisionTree {
 	   
    }
    
-   public static void evalTestFile(String file_name) throws Exception{
+   /*public static void evalTestFile(String file_name) throws Exception{
 	   BufferedReader br = new BufferedReader(new FileReader(file_name));
 	   String s="";
 	   String[] temp = null;
@@ -160,7 +159,7 @@ public class DecisionTree {
 	   
 	   br.close();
 	   
-   }
+   }*/
    
    public static void readDataset(String fileName, boolean hasHeader) throws IOException{
 	   BufferedReader br = new BufferedReader(new FileReader(fileName));
@@ -378,7 +377,7 @@ public class DecisionTree {
    
    public static NodeDetails getBestSplit(HashMap<Integer, HashMap<Integer, String>> hashData, int parentFeature, 
 		                                  Set<Integer> setValidRecords, float st, float end, Set<Integer> setVisited, int depth){
-	   List<String> result = new ArrayList<String>();
+	   //List<String> result = new ArrayList<String>();
 	   List<String> temp_result = new ArrayList<String>();
 	   List<String> list_left_record_no = new ArrayList<String>();
 	   List<String> list_right_record_no = new ArrayList<String>();
@@ -466,19 +465,19 @@ public class DecisionTree {
 	   
 	   //System.out.println("Visited Index: "+feature_index+", Split Val: "+split_value+", Class: "+class_label);
 	   List<String> list_class_dtls = new ArrayList<String>();
-	   int class_count = 0;
+	   //int class_count = 0;
 	   
 	   if(flag){
 	     if(depth > depth_limit){
 	    	 list_class_dtls = getClassLabel(parentFeature, st, end, setValidRecords);
 	    	 class_label = list_class_dtls.get(0);
-	    	 class_count = Integer.parseInt(list_class_dtls.get(1));
+	    	 //class_count = Integer.parseInt(list_class_dtls.get(1));
 	      }
 	   }
 	   else{
 		  list_class_dtls =  getClassLabel(parentFeature, st, end, setValidRecords);
 		  class_label = list_class_dtls.get(0);
-	      class_count = Integer.parseInt(list_class_dtls.get(1));
+	      //class_count = Integer.parseInt(list_class_dtls.get(1));
 	   }
 	   
 	   int temp_parent_feature = 0;
@@ -560,13 +559,13 @@ public class DecisionTree {
 		  }
    }
    
-   public static void displaySet(Set<Integer> set){
+   /*public static void displaySet(Set<Integer> set){
 	   for(int i : set)
 		  System.out.print(i+", ");
 	   System.out.println();
-   }
+   }*/
    
-   public static void displayAllRecords(){
+   /*public static void displayAllRecords(){
 	   Set<Integer> set = hashData.keySet();
 	   Iterator<Integer> it = set.iterator();
 	   
@@ -585,15 +584,15 @@ public class DecisionTree {
 	    	 System.out.println("Inner key: "+key1+", Value: "+hash.get(key1));
 	     }
 	   }
-   }
+   }*/
    
-   public static void displaySetVisited(Set<Integer> setVisited){
+   /*public static void displaySetVisited(Set<Integer> setVisited){
 	   Iterator<Integer> it = setVisited.iterator();
 	   
 	   while(it.hasNext()){
 		   System.out.println("Feature: "+it.next());
 	   }
-   }
+   }*/
    
    public static void displayTree(Node node, FileWriter fw) throws IOException{
 	   if(node == null)
@@ -610,7 +609,7 @@ public class DecisionTree {
 	   }
    }
 	
-   public static void main(String[] args) throws Exception{
+   /*public static void main(String[] args) throws Exception{
 	   BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 	   System.out.println("Please enter 1 for Gini, 2 for Info Gain measure: ");
 	   
@@ -646,7 +645,7 @@ public class DecisionTree {
 	   //String test_file = "test6.csv";
 	   //String path = curDir+"\\"+test_file;
 	   //evalTestFile(path);
-   }
+   }*/
 }
 
 class Node{

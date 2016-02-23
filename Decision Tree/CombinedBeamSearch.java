@@ -1,7 +1,3 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -244,14 +240,14 @@ public class CombinedBeamSearch {
 	   List<SplitDetails> list_result = new ArrayList<SplitDetails>();
 	   List<String> result = new ArrayList<String>();
 	   
-	   List<Float> list_gini = new ArrayList<Float>();
+	   //List<Float> list_gini = new ArrayList<Float>();
 	   List<String> temp_result = new ArrayList<String>();
 	   List<String> list_left_record_no = new ArrayList<String>();
 	   List<String> list_right_record_no = new ArrayList<String>();
 	   int records = DecisionTree.hashData.size();
-	   int split_val_index = -1;
-	   int feature_index = 0;   // class label for parent node remaining
-	   float min = Integer.MAX_VALUE;
+	   //int split_val_index = -1;
+	   //int feature_index = 0;   // class label for parent node remaining
+	   //float min = Integer.MAX_VALUE;
 	   float gini = 1f;
 	   float split_value = Float.MIN_VALUE;
 	   String class_label = "-1";
@@ -410,11 +406,11 @@ public class CombinedBeamSearch {
 				}
 				listNodeDetails.set(i, temp_node_details.get(i));
 			}
-			//System.out.println("********************************");
+			
 		}
 	}
 	
-	public static String predictClass(BeamNode node, String[] temp){
+	/*public static String predictClass(BeamNode node, String[] temp){
 		   String predict_class = node.sd.class_label; 
 		   
 		   if(!predict_class.equals("-1"))
@@ -429,9 +425,9 @@ public class CombinedBeamSearch {
 		   else
 		      return predictClass(node.right, temp);
 		    
-		}
+		}*/
 	
-	 public static void evalTestFile(String file_name) throws Exception{
+	 /*public static void evalTestFile(String file_name) throws Exception{
 		   BufferedReader br = new BufferedReader(new FileReader(file_name));
 		   String s="";
 		   String[] temp = null;
@@ -454,9 +450,9 @@ public class CombinedBeamSearch {
 		   
 		   br.close();
 		   
-	   }
+	   }*/
 	
-	public static void main(String[] args) throws Exception{
+	/*public static void main(String[] args) throws Exception{
 		String criteria = "gini";	
 		int m = 3;
 	    int k = 10;
@@ -464,6 +460,7 @@ public class CombinedBeamSearch {
 	    
 	    String curDir = CrossValidation.curDir;
 	    String fileName = curDir+"\\train6.csv";
+	    
 	    DecisionTree.readDataset(fileName, false);
 	 
 	    //System.out.println("Decision Tree");
@@ -474,7 +471,7 @@ public class CombinedBeamSearch {
 		String test_file = "test6.csv";
 		String path = curDir+"\\"+test_file;
 		evalTestFile(path);
-     }
+     }*/
 }
 
 class BeamNodeDetails{
