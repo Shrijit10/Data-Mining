@@ -3,11 +3,15 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 
@@ -19,6 +23,7 @@ public class OverfitPrevention {
    static int total_records;
    static Set<String> setLabels;
    static HashMap<Integer, ROCObj> hashROC;
+   static HashMap<Float, ROCAxes> hashROCAxes;
    
    public static void init(String criteria){
 	   curDir = System.getProperty("user.dir");
@@ -31,7 +36,60 @@ public class OverfitPrevention {
    }
    
    public static void getROC(){
+	   List<ROCObj> listRoc = new ArrayList<ROCObj>();
+	   for(Entry<Integer, ROCObj> e : hashROC.entrySet()){
+		   listRoc.add(e.getValue());
+	   }
 	   
+	   Collections.sort(listRoc, new Comparator<ROCObj>(){
+		   @Override
+		   public int compare(ROCObj r1, ROCObj r2){
+			   if(r1.threshold == r2.threshold)
+				   return 0;
+			   else if(r1.threshold < r2.threshold)
+				      return -1;
+			   else
+				   return 1;
+		   }
+		   
+	   });
+	   
+	   int total_correct = 0;
+	   int total_wrong = 0;
+	   int roc_tp = 0;
+	   int roc_fp = 0;
+	   int roc_tn = 0;
+	   int roc_fn = 0;
+	   
+	   for(int i=0;i<listRoc.size();i++){
+		   ROCObj roc = listRoc.get(i);
+		   if(roc.isCorrect)   
+		      total_correct++;
+		   else
+			   total_wrong++;
+	   }
+	   
+	   for(int i=0;i<listRoc.size();i++){
+		   ROCObj roc1 = listRoc.get(i);
+		   roc_tp = 0;
+		   roc_fp = 0;
+		   for(int j=i;j<listRoc.size();i++){
+			  ROCObj roc2 = listRoc.get(j);
+			   
+			  if(roc1.isCorrect == roc2.isCorrect)
+				 roc_tp++;
+			  else
+				 roc_fp++;
+			}
+		   
+		   roc_fn = total_correct - roc_tp;
+		   roc_tn = total_wrong - roc_fp;
+		   
+		   float tpr = (float)roc_tp/(roc_tp + roc_fn);
+		   float fpr = (float)roc_fp/(roc_fp + roc_tn);
+		   
+		   hashROCAxes.put(roc1.threshold, new ROCAxes(tpr, fpr));
+	   }
    }
    
    public static void buildValidationSet(String path) throws Exception{
@@ -100,14 +158,16 @@ public class OverfitPrevention {
 	   }
    }
    
-   public static String predictLabel(PNode pnode, String[] temp){
+   public static PredictLabelObj predictLabel(PNode pnode, String[] temp){
 	   String predict_class = pnode.label; 
 	   
-	   if(!predict_class.equals("-1"))
-	    	return predict_class;
-	   
+	   if(!predict_class.equals("-1")){
+	       float prob = (float)pnode.label_count/pnode.max_class_count;	
+		   return new PredictLabelObj(predict_class, prob);
+	   }
 	   if(predict_class.equals("-1") && pnode.left == null && pnode.right == null){
-		   return pnode.max_class_label;
+		   float prob = (float)pnode.label_count/pnode.max_class_count;	
+		   return new PredictLabelObj(pnode.max_class_label, prob);
 	   }
 	   
 	   int feature_index = pnode.feature_index;
@@ -121,11 +181,12 @@ public class OverfitPrevention {
 	    
 	}
   
-  public static void evalTestFile(String file_name) throws Exception{
+  public static void evalTestFile(String file_name, boolean roc_YN) throws Exception{
 	   BufferedReader br = new BufferedReader(new FileReader(file_name));
 	   String s="";
 	   String[] temp = null;
 	   String predict_class = "";
+	   float prob = -1f;
 	   int correct = 0;
 	   int total = 0;
 	   boolean flag = false;
@@ -149,10 +210,16 @@ public class OverfitPrevention {
 	   while((s=br.readLine())!=null){
 		   total++;
 		   temp = s.split(",");
-		   predict_class = predictLabel(proot, temp);
+		   PredictLabelObj pl = predictLabel(proot, temp);
+		   predict_class = pl.label;
+		   prob = pl.prob;
 		   
 		   String actual_class = temp[temp.length-1];
+		   
 		   if(predict_class.equals(actual_class)){
+			   if(roc_YN){
+				   hashROC.put(total, new ROCObj(prob, true));
+			   }
 			   correct++;
 		       if(predict_class.equals(pos_class))
 		    	   tp++;
@@ -160,6 +227,9 @@ public class OverfitPrevention {
 		    	   tn++;
 		   }
 		   else{
+			   if(roc_YN){
+				   hashROC.put(total, new ROCObj(prob, false));
+			   }
 			   if(predict_class.equals(pos_class))
 		    	   fp++;
 		       else
@@ -186,7 +256,8 @@ public class OverfitPrevention {
 	   while((s=br.readLine())!=null){
 		   total++;
 		   temp = s.split(",");
-		   predict_class = predictLabel(pnode, temp);
+		   PredictLabelObj pl = predictLabel(pnode, temp);
+		   predict_class = pl.label;
 		   
 		   String actual_class = temp[temp.length-1];
 		   if(predict_class.equals(actual_class))
@@ -388,7 +459,7 @@ public class OverfitPrevention {
    
    public static void main(String[] args) throws Exception{
 	   String criteria = "gini";
-	   String type = "V";
+	   String type = "M";
 	   init(criteria);
 	   String fileName = curDir+"\\train6.csv";
 	   DecisionTree.readDataset(fileName, false);
@@ -408,8 +479,10 @@ public class OverfitPrevention {
 	   
 	   String test_file = "test6.csv";
 	   String path = curDir+"\\"+test_file;
-	   evalTestFile(path);
-	}
+	   evalTestFile(path, true);
+	
+       
+   }
 	   
 }
 
@@ -488,15 +561,26 @@ class ROCObj{
 	}
 }
 
-class predictLabelObj{
+class PredictLabelObj{
 	String label;
 	float prob;
 	
-	predictLabelObj(){}
+	PredictLabelObj(){}
 	
-	predictLabelObj(String label, float prob){
+	PredictLabelObj(String label, float prob){
 		this.label = label;
 		this.prob = prob;
 	}
+}
+
+class ROCAxes{
+	float tpr;
+	float fpr;
+	
+	ROCAxes(float tpr, float fpr){
+		this.tpr = tpr;
+		this.fpr = fpr;
+	}
+	
 }
 
