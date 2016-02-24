@@ -9,10 +9,43 @@ import java.util.Set;
 
 public class EvaluateOverfitPrevention {
   static String curDir;	
-	
+  static int tp;
+  static int fp;
+  static int tn;
+  static int fn;
+  static float precision;
+  static float recall;
+  
   public static void init(String criteria){
 	  OverfitPrevention.init(criteria);
       curDir = System.getProperty("user.dir");
+  }
+  
+  public static float getSimpleAccuracy(){
+	  float accuracy = (float)(tp + tn)/(tp+fp+tn+fn);
+	  return accuracy;
+  }
+  
+  public static float getBalancedAccuracy(){
+	  float sensitivity = (float) tp/(tp + fn);
+	  float specificity = (float) tn/(tn + fp);
+	  
+	  return (sensitivity + specificity)/2;
+  }
+  
+  public static float getPrecision(){
+	  precision = (float) tp/(tp + fp);
+	  return precision;
+  }
+  
+  public static float getRecall(){
+	  recall = (float) tp/(tp + fn);
+	  return recall;
+  }
+  
+  public static float getF1Measure(){
+	  float f1 = 2*precision*recall/(precision + recall);
+	  return f1;
   }
   
   public static void buildDecisionTree() throws IOException{
@@ -81,11 +114,11 @@ public class EvaluateOverfitPrevention {
 	   float prob = -1f;
 	   int correct = 0;
 	   int total = 0;
-	   String pos_class = "";
-	   int tp = 0;
+	   String pos_class = OverfitPrevention.pos_class;
+	   /*int tp = 0;
 	   int tn = 0;
 	   int fp = 0;
-	   int fn = 0;
+	   int fn = 0;*/
 	   
 	   while((s=br.readLine())!=null){
 		   total++;
@@ -115,8 +148,8 @@ public class EvaluateOverfitPrevention {
 		   }
 		}
 	   
-	   System.out.println("Accuracy: "+ (float)correct/total);
-	   System.out.println("Total: "+total+", Correct: "+correct);
+	   //System.out.println("tp: "+tp+", fp: "+fp+", tn: "+tn+", fn: "+fn);
+	   //System.out.println("Total: "+total+", Correct: "+correct);
 	   
 	   br.close();
 	}
@@ -125,6 +158,7 @@ public class EvaluateOverfitPrevention {
 	  String type = "";
 	  String criteria = "gini";
 	  int k = 10;
+	  boolean roc_YN = false;
 	  
 	  BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 	  System.out.println("Please enter 1 for Pessimistic, 2 for Validation Set and 3 for MDL: ");
@@ -144,7 +178,7 @@ public class EvaluateOverfitPrevention {
 	  
 	  init(criteria);
 	  
-	  String filename = "iris.csv";  // change filenames to 10 different datasets
+	  String filename = "winequality-white1.csv";  // change filenames to 10 different datasets
 	  int pos = filename.lastIndexOf(".");
       String ext = filename.substring(pos);
   	  String path = curDir+"\\"+filename;
@@ -153,8 +187,10 @@ public class EvaluateOverfitPrevention {
 
 	  int records = CrossValidation.hash.size();
 	  for(int i=1;i<=k;i++){
-		CrossValidation.generatePartitions(i, records, ext);
-	    
+		CrossValidation.generatePartitions(i, records, ext, roc_YN);
+		DecisionTree.hashData.clear();
+		DecisionTree.setLabels.clear();
+		
 		path = curDir+"\\"+"train"+i+ext;
 		DecisionTree.readDataset(path, false);
 		
@@ -172,10 +208,59 @@ public class EvaluateOverfitPrevention {
 		path = curDir+"\\"+"test"+i+ext;
 		System.out.println("Evaluating file: "+path);
 		
-	    evalTestFile(path, false);
+	    evalTestFile(path, roc_YN);
 	  }
-	 
 	  
-	  //OverfitPrevention.getROC();
+	  System.out.println();
+	  System.out.println("Precision: "+getPrecision());
+	  System.out.println("Recall: "+getRecall());
+	  System.out.println("Simple Accuracy: "+getSimpleAccuracy());
+	  System.out.println("Balanced Accuracy: "+getBalancedAccuracy());
+	  System.out.println("F1 Measure: "+getF1Measure());
+	  
+	  
+	 
+	  /*---------------------------------------------------------------------*/
+	  
+	  
+	  
+	  
+	  filename = "winequality-white1.csv"; // Class Label changed to binary to obtain ROC curve
+	  pos = filename.lastIndexOf(".");
+      ext = filename.substring(pos);
+  	  path = curDir+"\\"+filename;
+  	  
+  	  CrossValidation.readDataset(path, false); 
+  	  records = CrossValidation.hash.size();
+  	  
+	  //for(int i=1;i<=k;i++){
+  	  int fold = 1 ;
+	  CrossValidation.generatePartitions(fold, records, ext, true);
+	  DecisionTree.hashData.clear();
+	  DecisionTree.setLabels.clear();
+	  
+	  path = curDir+"\\"+"train_ROC"+fold+ext;
+	  DecisionTree.readDataset(path, false);
+		
+	  setPosNegClass();
+	  buildDecisionTree();
+
+	  Node droot = OverfitPrevention.droot;
+	  if(!type.equals("V"))
+		 OverfitPrevention.buildBestETree(droot, type);
+	  else{
+		 OverfitPrevention.buildValidationSet(path);
+		 OverfitPrevention.buildBestVTree(droot, path);
+	  }
+		
+	  path = curDir+"\\"+"test_ROC"+fold+ext;
+	  System.out.println("Evaluating file: "+path);
+		
+	  evalTestFile(path, true);
+	  //}
+  	  
+	  OverfitPrevention.getROC();
+	  
+	  OverfitPrevention.displayHashROCAxes();
    }
 }

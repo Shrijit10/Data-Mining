@@ -29,6 +29,58 @@ public class Correlation {
 	  }
    
   }
+  
+  public static void sortHighest(){
+	  Collections.sort(highest, new Comparator<CorrelatedPair>(){
+		  @Override
+		  public int compare(CorrelatedPair c1, CorrelatedPair c2){
+			 if(Math.abs(c1.val) == Math.abs(c2.val))
+				 return 0;
+			 else if(Math.abs(c1.val) > Math.abs(c2.val))
+				 return -1;
+			 else
+				 return 1;
+		  }
+	  });
+  }
+  
+  public static void sortLowest(){
+	  Collections.sort(lowest, new Comparator<CorrelatedPair>(){
+		  @Override
+		  public int compare(CorrelatedPair c1, CorrelatedPair c2){
+			 if(Math.abs(c1.val) == Math.abs(c2.val))
+				 return 0;
+			 else if(Math.abs(c1.val) < Math.abs(c2.val))
+				 return -1;
+			 else
+				 return 1;
+		  }
+	  });
+  }
+  
+  public static void displayMaxCorr(){
+	  int count = 0;
+	  System.out.println("Most Correlated");
+	  for(CorrelatedPair cp : highest){
+		  count++;
+		  System.out.println("Row: "+ cp.row+", Col: "+cp.col+", Value: "+cp.val);
+		  if(count==4)
+			  break;
+	  }
+  }
+  
+  public static void displayMinCorr(){
+	  System.out.println();
+	  System.out.println("Least Correlated");
+	  int count = 0;
+	  for(CorrelatedPair cp : lowest){
+		  count++;
+		  System.out.println("Row: "+ cp.row+", Col: "+cp.col+", Value: "+cp.val);
+	      
+		  if(count==4)
+			  break;
+	  }
+  }
 	
   public static void readCorData(String filename) throws Exception{
       BufferedReader br = new BufferedReader(new FileReader(filename));
@@ -43,51 +95,13 @@ public class Correlation {
 		  getMostCorrelated(temp, line);
 	  }
 	  
-      Collections.sort(highest, new Comparator<CorrelatedPair>(){
-		  @Override
-		  public int compare(CorrelatedPair c1, CorrelatedPair c2){
-			 if(c1.val == c2.val)
-				 return 0;
-			 else if(c1.val > c2.val)
-				 return -1;
-			 else
-				 return 1;
-		  }
-	  });
-      
-      Collections.sort(lowest, new Comparator<CorrelatedPair>(){
-		  @Override
-		  public int compare(CorrelatedPair c1, CorrelatedPair c2){
-			 if(Math.abs(c1.val) == Math.abs(c2.val))
-				 return 0;
-			 else if(Math.abs(c1.val) < Math.abs(c2.val))
-				 return -1;
-			 else
-				 return 1;
-		  }
-	  });
+	  sortHighest();
+	  sortLowest();
 	  
-	  int count = 0;
-	  System.out.println("Most Correlated");
-	  for(CorrelatedPair cp : highest){
-		  count++;
-		  System.out.println("Row: "+ cp.row+", Col: "+cp.col+", Value: "+cp.val);
-		  if(count==4)
-			  break;
-	  }
+	  displayMaxCorr();
+	  displayMinCorr();
 	  
-	  System.out.println();
-	  System.out.println("Least Correlated");
-	  count = 0;
-	  for(CorrelatedPair cp : lowest){
-		  count++;
-		  System.out.println("Row: "+ cp.row+", Col: "+cp.col+", Value: "+cp.val);
-	      
-		  if(count==4)
-			  break;
-	  }
-	  
-	  br.close();
+      br.close();
   }
 	
   public static void main(String[] args) throws Exception{

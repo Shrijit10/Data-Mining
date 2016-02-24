@@ -33,19 +33,30 @@ public class CrossValidation {
 	   br.close();
   }
   
-  public static void generatePartitions(int fold, int records, String ext) throws IOException{
+  public static void generatePartitions(int fold, int records, String ext, boolean roc_YN) throws IOException{
 	  int fold_records = records/k;
 	  
 	  int fold_end = fold_records*fold;
 	  int fold_st = fold_end - fold_records + 1;
+	  FileWriter fw_test = null;
 	  
-	  FileWriter fw_test = new FileWriter("test"+fold+ext);
+	  if(!roc_YN)
+	     fw_test = new FileWriter("test"+fold+ext);
+	  else
+		 fw_test = new FileWriter("test_ROC"+fold+ext);  
+	  
 	  for(int i=fold_st;i<=fold_end;i++){
 		  fw_test.write(hash.get(i)+"\n");
 	  }
 	  fw_test.close();
 	  
-	  FileWriter fw_train = new FileWriter("train"+fold+ext);
+	  FileWriter fw_train = null;
+	  
+	  if(!roc_YN)
+	     fw_train = new FileWriter("train"+fold+ext);
+	  else
+		 fw_train = new FileWriter("train_ROC"+fold+ext); 
+	  
 	  for(int i=1;i<=records;i++){
 		  if(i >= fold_st && i<= fold_end)
 			  continue;

@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -246,7 +247,6 @@ public class DecisionTree {
 	   float info_gain = 0f;
 	   float entropy1 = 0f;
 	   float entropy2 = 0f;
-	   float parent_entropy = 0f;
 	   int totalNode1 = 0;
 	   int totalNode2 = 0;
 	   float prob1 = 0f;
@@ -285,13 +285,12 @@ public class DecisionTree {
 		   
 		   entropy1 += prob1 * Math.log(prob1)/Math.log(2);
 		   entropy2 += prob2 * Math.log(prob2)/Math.log(2);
-		   parent_entropy += prob * Math.log(prob)/Math.log(2);
        }
 	   
 	   float total_child_entropy = entropy1*totalNode1/(totalNode1 + totalNode2) + 
 			                       entropy2*totalNode2/(totalNode1 + totalNode2);
 	   
-	   info_gain = -1*parent_entropy - total_child_entropy;
+	   info_gain = (float) (-1.0 * total_child_entropy); 
 	   return info_gain;
 	}
    
@@ -300,8 +299,15 @@ public class DecisionTree {
 	   float measure = 0f;
 	   HashMap<String, Integer> hashLabel = new HashMap<String, Integer>(); // list label count for feature values less than split_pos
 	   
-	   String prevLabel = listFeatLabel.get(0).label;
-	   float prevFeatureVal = listFeatLabel.get(0).feature_val;
+	   String prevLabel="";
+	   float prevFeatureVal = Float.MIN_VALUE;
+	   
+	   if(listFeatLabel.size() > 0)
+	      prevLabel = listFeatLabel.get(0).label;
+	   
+	   if(listFeatLabel.size() > 0)
+	      prevFeatureVal = listFeatLabel.get(0).feature_val;
+	   
 	   float node_gini = 1f;
 	   float node_gain = 0f;
 	   float best_split_value = Float.MIN_VALUE;
@@ -313,7 +319,9 @@ public class DecisionTree {
 	   for(String s : setLabels)
 		  hashLabel.put(s, 0);
 	   
-	   hashLabel.put(listFeatLabel.get(0).label, hashLabel.get(listFeatLabel.get(0).label)+1);
+	   if(listFeatLabel.size() > 0){
+		  hashLabel.put(listFeatLabel.get(0).label, hashLabel.get(listFeatLabel.get(0).label)+1);
+	   }
 	   
 	   for(int i=1;i<listFeatLabel.size();i++){
 		   hashLabel.put(listFeatLabel.get(i).label, hashLabel.get(listFeatLabel.get(i).label)+1);
@@ -334,8 +342,8 @@ public class DecisionTree {
 			  else if(criteria.equals("info_gain")){
 				node_gain = measure;
 				
-				if(node_gain > max){
-				   max = node_gain;	
+				if(node_gain < min){
+				   min = node_gain;	
 				   split_val_index = i-1;
 				   best_split_value = split_val;
 			    }
@@ -400,6 +408,7 @@ public class DecisionTree {
 	      if(!setVisited.contains(i)){
 	    	flag = true;  
 	    	List<FeatureLabel> listFeatLabel = new ArrayList<FeatureLabel>();
+	    	
 	    	
 	    	for(int j=1;j<=records;j++){
 	    	   if(st==Float.MIN_VALUE && end == Float.MAX_VALUE){
@@ -609,7 +618,7 @@ public class DecisionTree {
 	   }
    }
 	
-   /*public static void main(String[] args) throws Exception{
+   public static void main(String[] args) throws Exception{
 	   BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 	   System.out.println("Please enter 1 for Gini, 2 for Info Gain measure: ");
 	   
@@ -642,10 +651,10 @@ public class DecisionTree {
 	   displayTree(root, fw);
 	   fw.close();
 	   
-	   //String test_file = "test6.csv";
-	   //String path = curDir+"\\"+test_file;
+	   String test_file = "test6.csv";
+	   String path = curDir+"\\"+test_file;
 	   //evalTestFile(path);
-   }*/
+   }
 }
 
 class Node{

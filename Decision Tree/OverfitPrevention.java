@@ -77,6 +77,11 @@ public class OverfitPrevention {
 	   
 	   displayListROC(listRoc);
 	   
+	   System.out.println();
+	   System.out.println("Pos Class: "+pos_class);
+	   System.out.println("Neg Class: "+neg_class);
+	   System.out.println();
+	   
 	   Set<Float> set_visited = new HashSet<Float>();
 	   for(ROCObj r : listRoc){
 		   if(!set_visited.contains(r.threshold)){
@@ -89,7 +94,7 @@ public class OverfitPrevention {
 			   roc_fn = 0;
 			   
 			   for(ROCObj r1 : listRoc){
-				   if(r1.threshold < threshold){
+				   if(r1.threshold <= threshold){
 					   if(r1.actual_class.equals(neg_class))
 						   roc_tn++;
 					   else
@@ -103,9 +108,34 @@ public class OverfitPrevention {
 				   }
 			   }
 			   
-			   float tpr = roc_tp/(roc_tp+roc_fn);
-			   float fpr = roc_fp/(roc_fp+roc_tn);
-			   hashROCAxes.put(threshold, new ROCAxesObj(tpr, fpr));
+			   //System.out.println("Roc_tn: "+roc_tn);
+			   //System.out.println("Roc_tp: "+roc_tp);
+			   //System.out.println("Roc_fp: "+roc_fp);
+			   //System.out.println("Roc_fn: "+roc_fn);
+			   
+			   float deno_tpr = 1f;
+			   float deno_fpr = 1f;
+			   float deno_precision = 1f;
+			   float deno_recall = 1f;
+			   
+			   if(roc_tp+roc_fn != 0)
+			      deno_tpr = (float) (roc_tp+roc_fn);
+			   
+			   if(roc_fp+roc_tn != 0)
+				  deno_fpr = (float)(roc_fp+roc_tn);
+			   
+			   if(roc_tp + roc_fp != 0)
+				   deno_precision = (float)(roc_tp + roc_fp);
+			   
+			   if(roc_tp + roc_fn != 0)
+				   deno_recall = (float)(roc_tp + roc_fn);
+				   
+			   float tpr = (float)roc_tp/deno_tpr;
+			   float fpr = (float)roc_fp/deno_fpr;
+			   float precision = (float)roc_tp/deno_precision;
+			   float recall = (float)roc_tp/deno_recall;
+			   
+			   hashROCAxes.put(threshold, new ROCAxesObj(tpr, fpr, precision, recall));
 		   }
 	   }
 	   
@@ -119,7 +149,8 @@ public class OverfitPrevention {
    
    public static void displayHashROCAxes(){
 	   for(Entry<Float, ROCAxesObj> e : hashROCAxes.entrySet()){
-		   System.out.println("Key: "+e.getKey()+", TPR: "+e.getValue().tpr+", FPR: "+e.getValue().fpr);
+		   System.out.println("Key: "+e.getKey()+", TPR: "+e.getValue().tpr+", FPR: "+e.getValue().fpr+
+				              ", Precision: "+e.getValue().precision+", Recall "+e.getValue().recall);
 		}
    }
    
@@ -606,10 +637,14 @@ class PredictLabelObj{
 class ROCAxesObj{
 	float tpr;
 	float fpr;
+	float precision;
+	float recall;
 	
-	ROCAxesObj(float tpr, float fpr){
+	ROCAxesObj(float tpr, float fpr, float precision, float recall){
 		this.tpr = tpr;
 		this.fpr = fpr;
+		this.precision = precision;
+		this.recall = recall;
 	}
 	
 }

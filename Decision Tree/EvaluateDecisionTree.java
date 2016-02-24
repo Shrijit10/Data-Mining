@@ -90,7 +90,7 @@ public class EvaluateDecisionTree {
 	 init(criteria); 
 	 int k = CrossValidation.k;
 	 
-	 String filename = "iris.csv";  // change filenames to 10 different datasets
+	 String filename = "winequality-white.csv";  // change filenames to 10 different datasets
 	 int pos = filename.lastIndexOf(".");
 	 String ext = filename.substring(pos);
 	 String path = curDir+"\\"+filename;
@@ -99,8 +99,10 @@ public class EvaluateDecisionTree {
 
 	 int records = CrossValidation.hash.size();
 	 for(int i=1;i<=k;i++){
-		CrossValidation.generatePartitions(i, records, ext);
-	    
+		CrossValidation.generatePartitions(i, records, ext, false);
+		DecisionTree.hashData.clear();
+		DecisionTree.setLabels.clear();
+		
 		path = curDir+"\\"+"train"+i+ext;
 		DecisionTree.readDataset(path, false);
 		

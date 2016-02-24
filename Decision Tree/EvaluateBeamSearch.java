@@ -62,7 +62,7 @@ public class EvaluateBeamSearch {
   	  int m = Integer.parseInt(br.readLine());
   	  init(criteria, m, k);
   	  
-  	  String filename = "iris.csv";  // change filenames to 10 different datasets
+  	  String filename = "fertility.csv";  // change filenames to 10 different datasets
 	  int pos = filename.lastIndexOf(".");
 	  String ext = filename.substring(pos);
 	  String path = curDir+"\\"+filename;
@@ -71,8 +71,10 @@ public class EvaluateBeamSearch {
 
 	  int records = CrossValidation.hash.size();
 	  for(int i=1;i<=k;i++){
-		CrossValidation.generatePartitions(i, records, ext);
-	    
+		CrossValidation.generatePartitions(i, records, ext, false);
+		DecisionTree.hashData.clear();
+		DecisionTree.setLabels.clear();
+		
 		path = curDir+"\\"+"train"+i+ext;
 		DecisionTree.readDataset(path, false);
 		

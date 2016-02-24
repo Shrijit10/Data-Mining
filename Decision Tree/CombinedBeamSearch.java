@@ -116,7 +116,7 @@ public class CombinedBeamSearch {
 	   if(depth > DecisionTree.depth_limit){
 		  list_class_dtls = DecisionTree.getClassLabel(parentFeature, st, end, setValidRecords);
 	      class_label = list_class_dtls.get(0);
-	      result.set(2, class_label);
+	      //result.set(2, class_label);
 	   }
 	   
 	   SplitDetails sd = new SplitDetails(gini,
@@ -134,6 +134,7 @@ public class CombinedBeamSearch {
 	     list_result.set(m-1, sd);
 	   else
 		 list_result.add(sd);
+	   
 	}
 	
 	public static void sortListResult(List<SplitDetails> list_result){
@@ -284,12 +285,12 @@ public class CombinedBeamSearch {
 	    	temp_result = DecisionTree.getGini(listFeatLabel);   // gets gini for the given feature
 	    	gini = Float.parseFloat(temp_result.get(0));
 	    	
-	    	if(list_result.size() < m){
+	    	if(list_result.size() < m && listFeatLabel.size() > 0){
 	    		populateListResult(i, temp_result, listFeatLabel, result, parentFeature, st, end, setValidRecords, depth, list_result);
 	    		sortListResult(list_result);
 	    	}
 	    	else{
-	    	   if(gini < list_result.get(m-1).gini){
+	    	   if(listFeatLabel.size() > 0 && gini < list_result.get(m-1).gini){
 	    		   populateListResult(i, temp_result, listFeatLabel, result, parentFeature, st, end, setValidRecords, depth, list_result);
 	    		   sortListResult(list_result);
 	    	   }

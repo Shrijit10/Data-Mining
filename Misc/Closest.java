@@ -1,13 +1,18 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Closest {
 	static List<WineObj> list_wine_obj;
+	static Set<String> setLabels;
 	
 	public static void init(){
 		list_wine_obj = new ArrayList<WineObj>();
+		setLabels = new HashSet<String>();
 	}
 	
     public static void readWineData(String path, boolean hasHeader) throws Exception{
@@ -22,6 +27,8 @@ public class Closest {
   	  while((s=br.readLine())!=null){
   		 temp = s.split(",");
   		 line_no++;
+  		 setLabels.add(temp[0]);
+  		 
   		 list_wine_obj.add(new WineObj(line_no,
   				                       Integer.parseInt(temp[0]),
   				                       Float.parseFloat(temp[1]),
@@ -66,48 +73,153 @@ public class Closest {
     		  
     }
     
-    public static float getClosestLabelPerc(){
+    public static void displayClosestExample(int index, int closest, FileWriter fw) throws Exception{
+    	WineObj w = list_wine_obj.get(closest);
+    	
+    	if(fw!=null){
+    	  fw.write("Closest Example for Record: "+(index+1)+" with class label: "+list_wine_obj.get(index).label+" is"+"\n");
+    	  fw.write("Class Label: "+w.label+", Alcohol: "+w.alcohol+", Malic Acid: "+w.malic_acid+", Ash: "+w.ash+", Alcalinity: "+w.alcalinity+
+		         ", Magnesium: "+w.magnesium+", Total Phenols: "+w.total_phenol+", Flavanoid: "+w.flavanoid+
+		         ", Non-Flavanoid: "+w.non_flavanoid+", Proanthocyanins: "+w.proantho+
+		         ", Color Intensity: "+w.color+", Hue: "+w.hue+", Diluted Wines: "+w.diluted_wines+
+		         ", Proline: "+w.proline+"\n\n");
+    	}
+    	//System.out.println("Closest Example for Record: "+(index+1)+" with class label: "+list_wine_obj.get(index).label+" is");
+    	/*System.out.println("Class Label: "+w.label+", Alcohol: "+w.alcohol+", Malic Acid: "+w.malic_acid+", Ash: "+w.ash+", Alcalinity: "+w.alcalinity+
+    			           ", Magnesium: "+w.magnesium+", Total Phenols: "+w.total_phenol+", Flavanoid: "+w.flavanoid+
+    			           ", Non-Flavanoid: "+w.non_flavanoid+", Proanthocyanins: "+w.proantho+
+    			           ", Color Intensity: "+w.color+", Hue: "+w.hue+", Diluted Wines: "+w.diluted_wines+
+    			           ", Proline: "+w.proline+"\n");
+    	System.out.println();*/
+    	
+    }
+    
+    public static float getClosestLabelPerc(FileWriter fw, boolean is_norm, int label) throws Exception{
     	float min = Float.MAX_VALUE;
     	float dist = 0f;
     	int closest = -1;
     	int closest_label = -1;
     	int count = 0;
+    	int size = 0;
+    	
+    	float closest_proline=0f;
+    	float closest_mag=0f;
+    	FileWriter fw_closest = null;
+    	
+    	if(fw!=null){
+    	  if(!is_norm)
+    	    fw_closest = new FileWriter("closest_example_without_normalization.txt");
+    	  else
+    	    fw_closest = new FileWriter("closest_example_with_normalization.txt");
+    	}
     	
     	for(int i=0;i<list_wine_obj.size();i++){
     		 min = Float.MAX_VALUE;
     	     closest = -1;	 
     	     closest_label = -1;
-    		 for(int j=0;j<list_wine_obj.size();j++){
-    			  if(i!=j){
-    				 dist = getEuclideanDist(list_wine_obj.get(i), list_wine_obj.get(j)); 
-    				 
-    				 if(dist < min){
-    					 min = dist;
-    				     closest = j;
-    				     closest_label = list_wine_obj.get(j).label;
-    				 }
-    			  }
-    		 } 
+    	     closest_proline = 0f;
+    	     closest_mag = 0f;
+    	     
+    	     if(label == list_wine_obj.get(i).label || label == -1){
+    	    	 size++;
+	    		 for(int j=0;j<list_wine_obj.size();j++){
+	    			  if(i!=j){
+	    				 dist = getEuclideanDist(list_wine_obj.get(i), list_wine_obj.get(j)); 
+	    				 
+	    				 if(dist < min){
+	    					 min = dist;
+	    				     closest = j;
+	    				     closest_label = list_wine_obj.get(j).label;
+	    				     closest_proline = list_wine_obj.get(j).proline;
+	    				     closest_mag = list_wine_obj.get(j).magnesium;
+	    				 }
+	    			  }
+	    		 } 
+	    		 
+	    		 if(fw_closest!=null)
+	    		   displayClosestExample(i, closest, fw_closest);
+	    		 
+	    		 list_wine_obj.get(i).closest_record_no = closest;
+	    		 if(closest_label == list_wine_obj.get(i).label)
+	    			 count++;
+	    		 
+	    	     double proline_mag = Math.pow(list_wine_obj.get(i).proline - closest_proline,2) + 
+	    			                      Math.pow(list_wine_obj.get(i).magnesium - closest_mag, 2);
+	    			 
+	    	   	 proline_mag = Math.sqrt(proline_mag);
+	    	   	 
+	    	   	 if(fw!=null)
+	    		   fw.write(min+","+proline_mag+"\n");
+    	     }
     		 
-    		 list_wine_obj.get(i).closest_record_no = closest;
-    		 if(closest_label == list_wine_obj.get(i).label)
-    			 count++;
     	}
     	
-    	return (float)count/list_wine_obj.size();
+    	if(fw_closest!=null)
+    	  fw_closest.close();
+    	
+    	if(fw!=null){
+    	  if(!is_norm)
+    	    System.out.println("Please check \"closest_example_without_normalization.txt\" to find closest example for a given example");
+    	  else
+    	    System.out.println("Please check \"closest_example_with_normalization.txt\" to find closest example for a given example");	
+    	}
+    	
+    	return (float)count/size;
     }
 	
-	public static void main(String[] args) throws Exception{
+	/*public static void main(String[] args) throws Exception{
       init();
 		
-	  String filename = "wine.csv";
+	  String filename = "data_wine_without_norm.csv";    
   	  String curDir = System.getProperty("user.dir");
   	  String path = curDir+"\\"+filename;
+  	  boolean is_norm = false;
   	  
-  	  readWineData(path, true);
-  	  float result = getClosestLabelPerc();
-  	  System.out.println("Result: "+result);
-    }
+  	  readWineData(path, false);
+  	  
+  	  FileWriter fw = new FileWriter(curDir+"\\without_norm_dist.csv");
+  	  float result = getClosestLabelPerc(fw, is_norm, -1);
+  	  fw.close();
+  	  
+  	  System.out.println("For entire dataset, Before Normalization...");
+  	  System.out.println("Closest Neighbor %: "+result*100);
+  	  System.out.println();
+  	  
+  	  for(String s : setLabels){
+  		int label = Integer.parseInt(s);  
+  		result = getClosestLabelPerc(null, is_norm, label);
+  		
+  		System.out.println("For class: "+label+", Before Normalization...");
+    	System.out.println("Closest Neighbor %: "+result*100);
+    	System.out.println();
+  	  }
+  	  
+  	  list_wine_obj.clear();
+  	  filename = "data_wine_with_norm.csv";
+  	  path = curDir+"\\"+filename;
+  	  readWineData(path, false);
+  	  
+  	  is_norm = true;
+  	  
+  	  fw = new FileWriter(curDir+"\\with_norm_dist.csv");
+  	  result = getClosestLabelPerc(fw, is_norm, -1);
+  	  fw.close();
+	  
+	  System.out.println("For entire dataset, After Normalization...");
+	  System.out.println("Closest Neighbor %: "+result*100);
+	  System.out.println();
+  	  
+  	  for(String s : setLabels){
+  		int label = Integer.parseInt(s);  
+  		result = getClosestLabelPerc(null, is_norm, label);
+  		
+  		System.out.println("For class: "+label+", After Normalization...");
+    	System.out.println("Closest Neighbor %: "+result*100);
+    	System.out.println();
+  	  }
+  	  
+  	  
+    }*/
 	
 }
 
