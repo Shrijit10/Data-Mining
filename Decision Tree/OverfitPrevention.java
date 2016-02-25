@@ -1,5 +1,4 @@
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -38,19 +37,6 @@ public class OverfitPrevention {
 	   total_records = DecisionTree.hashData.size();
 	}
    
-    /*public static void setPosNegClass(){
-       boolean flag = false;
- 	   for(String label : setLabels){
- 		   if(!flag){
- 			 pos_class = label;
- 			 flag = true; 
- 		   }  
- 		   else{
- 			 neg_class = label;
- 		   }
- 	   }
-    }*/
-   
     public static void getROC(){
 	   List<ROCObj> listRoc = new ArrayList<ROCObj>();
 	   for(Entry<Integer, ROCObj> e : hashROC.entrySet()){
@@ -78,8 +64,8 @@ public class OverfitPrevention {
 	   displayListROC(listRoc);
 	   
 	   System.out.println();
-	   System.out.println("Pos Class: "+pos_class);
-	   System.out.println("Neg Class: "+neg_class);
+	   System.out.println("Positive Class: "+pos_class);
+	   System.out.println("Negative Class: "+neg_class);
 	   System.out.println();
 	   
 	   Set<Float> set_visited = new HashSet<Float>();
@@ -142,8 +128,9 @@ public class OverfitPrevention {
    }
    
    public static void displayListROC(List<ROCObj> listRoc){
+	   System.out.println();
 	   for(int i=0;i<listRoc.size();i++){
-		   System.out.println("Prob: "+listRoc.get(i).threshold+", Class: "+listRoc.get(i).actual_class);
+		   System.out.println("Instance: "+(i+1)+", Probability: "+listRoc.get(i).threshold+", Actual Class: "+listRoc.get(i).actual_class);
 	   }
    }
    
@@ -507,41 +494,6 @@ public class OverfitPrevention {
 	  proot = prev_root;
 	  refinePTree(proot);
 	  //displayETree(proot, null);
-	   
-   }
-   
-   
-   public static void main(String[] args) throws Exception{
-	   String criteria = "gini";
-	   String type = "M";
-	   init(criteria);
-	   String fileName = curDir+"\\iris_2.csv";
-	   DecisionTree.readDataset(fileName, false);
-	   
-	   setLabels = DecisionTree.setLabels;
-	   
-	   //setPosNegClass();
-	   
-	   buildDecisionTree();
-	   
-	   //displayTree(droot, null);
-	   //System.out.println("*************************");
-	   
-	   if(!type.equals("V"))
-	      buildBestETree(droot, type);
-	   else{
-		  buildValidationSet(fileName);
-		  buildBestVTree(droot, fileName);
-	   }
-	   
-	   String test_file = "iris_test.csv";
-	   String path = curDir+"\\"+test_file;
-	   evalTestFile(path, true);
-	
-	   getROC();
-	   //displayHashROCAxes();
-	   
-	   
 	   
    }
 	   

@@ -149,7 +149,7 @@ public class EvaluateOverfitPrevention {
 		}
 	   
 	   //System.out.println("tp: "+tp+", fp: "+fp+", tn: "+tn+", fn: "+fn);
-	   //System.out.println("Total: "+total+", Correct: "+correct);
+	   System.out.println("Total: "+total+", Correct: "+correct);
 	   
 	   br.close();
 	}
@@ -178,7 +178,8 @@ public class EvaluateOverfitPrevention {
 	  
 	  init(criteria);
 	  
-	  String filename = "winequality-white1.csv";  // change filenames to 10 different datasets
+	  // file should have binary class labels to obtain ROC plot
+	  String filename = "haberman_roc.csv";  // change filenames to 10 different datasets
 	  int pos = filename.lastIndexOf(".");
       String ext = filename.substring(pos);
   	  String path = curDir+"\\"+filename;
@@ -217,15 +218,13 @@ public class EvaluateOverfitPrevention {
 	  System.out.println("Simple Accuracy: "+getSimpleAccuracy());
 	  System.out.println("Balanced Accuracy: "+getBalancedAccuracy());
 	  System.out.println("F1 Measure: "+getF1Measure());
+	  System.out.println();
 	  
 	  
 	 
 	  /*---------------------------------------------------------------------*/
 	  
 	  
-	  
-	  
-	  filename = "winequality-white1.csv"; // Class Label changed to binary to obtain ROC curve
 	  pos = filename.lastIndexOf(".");
       ext = filename.substring(pos);
   	  path = curDir+"\\"+filename;
@@ -233,7 +232,6 @@ public class EvaluateOverfitPrevention {
   	  CrossValidation.readDataset(path, false); 
   	  records = CrossValidation.hash.size();
   	  
-	  //for(int i=1;i<=k;i++){
   	  int fold = 1 ;
 	  CrossValidation.generatePartitions(fold, records, ext, true);
 	  DecisionTree.hashData.clear();
@@ -254,13 +252,10 @@ public class EvaluateOverfitPrevention {
 	  }
 		
 	  path = curDir+"\\"+"test_ROC"+fold+ext;
-	  System.out.println("Evaluating file: "+path);
+	  System.out.println("Evaluating test file to plot ROC and Precision-Recall Curve:\n "+path);
 		
 	  evalTestFile(path, true);
-	  //}
   	  
 	  OverfitPrevention.getROC();
-	  
-	  OverfitPrevention.displayHashROCAxes();
    }
 }
