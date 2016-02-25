@@ -67,6 +67,7 @@ public class EvaluateDecisionTree {
 	   
 	   System.out.println("Accuracy: "+ (float)correct/total);
 	   System.out.println("Total: "+total+", Correct: "+correct);
+	   System.out.println();
 	   
 	   br.close();
 	   
@@ -90,7 +91,7 @@ public class EvaluateDecisionTree {
 	 init(criteria); 
 	 int k = CrossValidation.k;
 	 
-	 String filename = "winequality-white.csv";  // change filenames to 10 different datasets
+	 String filename = "haberman.csv";  // change filenames to 10 different datasets
 	 int pos = filename.lastIndexOf(".");
 	 String ext = filename.substring(pos);
 	 String path = curDir+"\\"+filename;
@@ -108,6 +109,8 @@ public class EvaluateDecisionTree {
 		
 		System.out.println("Building tree");
 		buildDecisionTree();
+		
+		//DecisionTree.displayTree(DecisionTree.root, null);
 		
 		path = curDir+"\\"+"test"+i+ext;
 		System.out.println("Evaluating file: "+path);
