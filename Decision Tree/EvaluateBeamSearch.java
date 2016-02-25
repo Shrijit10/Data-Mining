@@ -48,6 +48,7 @@ public class EvaluateBeamSearch {
 	   
 	    System.out.println("Accuracy: "+ (float)correct/total);
 	    System.out.println("Total: "+total+", Correct: "+correct);
+	    System.out.println();
 	   
 	    br.close();
 		   
@@ -62,7 +63,7 @@ public class EvaluateBeamSearch {
   	  int m = Integer.parseInt(br.readLine());
   	  init(criteria, m, k);
   	  
-  	  String filename = "fertility.csv";  // change filenames to 10 different datasets
+  	  String filename = "haberman.csv";  // change filenames to 10 different datasets
 	  int pos = filename.lastIndexOf(".");
 	  String ext = filename.substring(pos);
 	  String path = curDir+"\\"+filename;
