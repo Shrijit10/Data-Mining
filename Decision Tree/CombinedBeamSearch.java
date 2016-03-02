@@ -11,9 +11,10 @@ import java.util.Set;
 
 
 public class CombinedBeamSearch {
-	static List<BeamNodeDetails> listNodeDetails;
+	static List<BeamNodeDetails> listNodeDetails; // stores m trees
 	static int m;
 	static BeamNode root;
+	final static int depth_limit = 50;
 	
 	public static void init(String criteria, int noTrees, int k){
 		m = noTrees;
@@ -37,6 +38,9 @@ public class CombinedBeamSearch {
 		}
 	}
 	
+	/*
+	 * Below method returns the overall gini of the tree required to compare the different trees
+	 */
 	public static float getOverallGini(BeamNode node){
 		if(node == null || node.sd == null)
 			return 0;
@@ -44,6 +48,9 @@ public class CombinedBeamSearch {
 		return node.sd.gini + getOverallGini(node.left) + getOverallGini(node.right);
 	}
 	
+	/*
+	 * Below method compares the different trees by sorting on the overall gini
+	 */
 	public static void compareTrees(List<BeamNodeDetails> list_node_details){
 		for(BeamNodeDetails node : list_node_details){
 			BeamNode beam_node = node.beam_node;
@@ -64,6 +71,9 @@ public class CombinedBeamSearch {
 		});
 	}
 	
+	/*
+	 * Below method determines the best split and packs the best split value, split index, feature index, majority class label
+	 */
 	public static void populateListResult(int index, List<String> split_result, List<FeatureLabel> listFeatLabel,
 			                              List<String> result, int parentFeature, float st, float end, 
 			                              Set<Integer> setValidRecords, int depth, List<SplitDetails> list_result){
@@ -116,7 +126,6 @@ public class CombinedBeamSearch {
 	   if(depth > DecisionTree.depth_limit){
 		  list_class_dtls = DecisionTree.getClassLabel(parentFeature, st, end, setValidRecords);
 	      class_label = list_class_dtls.get(0);
-	      //result.set(2, class_label);
 	   }
 	   
 	   SplitDetails sd = new SplitDetails(gini,
@@ -151,6 +160,11 @@ public class CombinedBeamSearch {
 		});
 	}
 	
+	/*
+	 * Below method searches for the node to attach the child node. Returns a TargetBeamNode object which ...
+	 * contains the node to which the child should be attached and also the direction i.e. where the child should...
+	 * be attached (left or right). 0 indicates left, 1 indicates right, -1 used to identify initial node 
+	 */
 	public static TargetBeamNode searchTargetNode(BeamNode beam_node){
 		   Queue<BeamNode> queue = new LinkedList<BeamNode>();
 		   Set<String> setLabels = DecisionTree.setLabels;
@@ -179,6 +193,9 @@ public class CombinedBeamSearch {
 		   return null;
 		}
 	
+	/*
+	 * Below method attaches the child to the node in TargetBeamNode object returned by searchTargetNode
+	 */
 	public static boolean attachToTarget(BeamNode node, BeamNode target, BeamNode new_node, int direction){
 		if(node == null)
 			return false;
@@ -211,6 +228,10 @@ public class CombinedBeamSearch {
 		
 	}
 	
+	/*
+	 * Below method recomputes the visited features. This is necessary as there are different trees with each having..
+	 * a different set of visited features.
+	 */
 	public static boolean recomputeVisited(BeamNode node, Set<Integer> setVisited, int parentFeature){
 		if(node == null){
 		   return false;	
@@ -234,6 +255,9 @@ public class CombinedBeamSearch {
 		}
 	}
 	
+	/*
+	 * Below method returns the m best attributes
+	 */
 	public static List<SplitDetails> getBestSplit(HashMap<Integer, HashMap<Integer, String>> hashData, int parentFeature, 
                                             Set<Integer> setValidRecords, float st, float end, Set<Integer> setVisited, 
                                             int depth){
@@ -241,14 +265,10 @@ public class CombinedBeamSearch {
 	   List<SplitDetails> list_result = new ArrayList<SplitDetails>();
 	   List<String> result = new ArrayList<String>();
 	   
-	   //List<Float> list_gini = new ArrayList<Float>();
 	   List<String> temp_result = new ArrayList<String>();
 	   List<String> list_left_record_no = new ArrayList<String>();
 	   List<String> list_right_record_no = new ArrayList<String>();
 	   int records = DecisionTree.hashData.size();
-	   //int split_val_index = -1;
-	   //int feature_index = 0;   // class label for parent node remaining
-	   //float min = Integer.MAX_VALUE;
 	   float gini = 1f;
 	   float split_value = Float.MIN_VALUE;
 	   String class_label = "-1";
@@ -332,20 +352,24 @@ public class CombinedBeamSearch {
 			   break;
 		    
 			depth++;
+			if(depth > depth_limit)
+				break;
+			
 			count = 0;
 			
 			List<BeamNodeDetails> temp_node_details = new ArrayList<BeamNodeDetails>();
 			
 			for(BeamNodeDetails node_details : listNodeDetails){
 				BeamNode beam_node = node_details.beam_node;
-				//Set<Integer> setVisited = node_details.setVisited;
 				
 				Set<Integer> setVisited = new LinkedHashSet<Integer>();  
 				TargetBeamNode target_node = searchTargetNode(beam_node);
 				Set<Integer> setValidRecords = new HashSet<Integer>();
 				
-				if(target_node == null || setVisited.size() == no_features-1){
-					count++;
+				
+				
+				if(target_node == null || setVisited.size() == no_features-1){ // if all features are visited
+					count++; 
 					continue;
 				}
 					
@@ -373,8 +397,8 @@ public class CombinedBeamSearch {
 				
 				list_result = getBestSplit(DecisionTree.hashData, parentFeature, setValidRecords, st, end, setVisited, depth);
 				
-				//System.out.println("Set Size: "+setVisited.size());
-				for(int i=0;i<list_result.size();i++){
+				// Iterate loop for m best attributes
+				for(int i=0;i<list_result.size();i++){ 
 					BeamNode new_node = new BeamNode();
 					
 					SplitDetails sd = list_result.get(i);
@@ -392,14 +416,12 @@ public class CombinedBeamSearch {
 					
 				}
 				
-				//System.out.println("Index: "+list_result.get(0).feature_index+", Value: "+list_result.get(0).gini+", Class: "+list_result.get(0).class_label);
-				//System.out.println("Index: "+list_result.get(1).feature_index+", Value: "+list_result.get(1).gini+", Class: "+list_result.get(1).class_label);
-				//System.out.println("Index: "+list_result.get(2).feature_index+", Value: "+list_result.get(2).gini+", Class: "+list_result.get(2).class_label);
-			    //System.out.println("******************************************");
 			}
 			
+			// trees sorted according to overall gini. 'm' best trees will be at the start of the list
 			compareTrees(temp_node_details);
 			
+			// iterate m times and store the m best trees in listNodeDetails
 			for(int i=0;i<m;i++){
 				
 				if(i==temp_node_details.size()){

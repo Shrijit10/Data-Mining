@@ -149,7 +149,7 @@ public class EvaluateOverfitPrevention {
 		}
 	   
 	   //System.out.println("tp: "+tp+", fp: "+fp+", tn: "+tn+", fn: "+fn);
-	   System.out.println("Total: "+total+", Correct: "+correct);
+	   //System.out.println("Total: "+total+", Correct: "+correct);
 	   
 	   br.close();
 	}
@@ -178,8 +178,8 @@ public class EvaluateOverfitPrevention {
 	  
 	  init(criteria);
 	  
-	  // file should have binary class labels to obtain ROC plot
-	  String filename = "haberman_roc.csv";  // change filenames to 10 different datasets
+	  // file should have binary class labels to obtain ROC plot(eg. iris dataset was changed to contain only Setosa and Non-Setosa)
+	  String filename = "iris.csv";  // change filenames to 10 different datasets
 	  int pos = filename.lastIndexOf(".");
       String ext = filename.substring(pos);
   	  String path = curDir+"\\"+filename;
@@ -196,6 +196,8 @@ public class EvaluateOverfitPrevention {
 		DecisionTree.readDataset(path, false);
 		
 		setPosNegClass();
+		 
+		OverfitPrevention.droot = new Node();
 		buildDecisionTree();
 
 		Node droot = OverfitPrevention.droot;
@@ -222,8 +224,8 @@ public class EvaluateOverfitPrevention {
 	  
 	  
 	 
-	  /*---------------------------------------------------------------------*/
-	  
+	  /* Below part required to plot ROC and Precision-Recall Curve */
+	   
 	  
 	  pos = filename.lastIndexOf(".");
       ext = filename.substring(pos);
@@ -241,6 +243,7 @@ public class EvaluateOverfitPrevention {
 	  DecisionTree.readDataset(path, false);
 		
 	  setPosNegClass();
+	  OverfitPrevention.droot = new Node();
 	  buildDecisionTree();
 
 	  Node droot = OverfitPrevention.droot;

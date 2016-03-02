@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 
 public class EvaluateBeamSearch {
@@ -63,7 +64,7 @@ public class EvaluateBeamSearch {
   	  int m = Integer.parseInt(br.readLine());
   	  init(criteria, m, k);
   	  
-  	  String filename = "haberman.csv";  // change filenames to 10 different datasets
+  	  String filename = "concrete_modified.csv";  // change filenames to 10 different datasets
 	  int pos = filename.lastIndexOf(".");
 	  String ext = filename.substring(pos);
 	  String path = curDir+"\\"+filename;
@@ -71,7 +72,7 @@ public class EvaluateBeamSearch {
 	  CrossValidation.readDataset(path, false); 
 
 	  int records = CrossValidation.hash.size();
-	  for(int i=1;i<=k;i++){
+	  for(int i=1;i<=k;i++){ // run 10-fold cross validation
 		CrossValidation.generatePartitions(i, records, ext, false);
 		DecisionTree.hashData.clear();
 		DecisionTree.setLabels.clear();
@@ -80,8 +81,13 @@ public class EvaluateBeamSearch {
 		DecisionTree.readDataset(path, false);
 		
 		System.out.println("Building trees");
-		CombinedBeamSearch.getBestTree();
 		
+		CombinedBeamSearch.listNodeDetails = new ArrayList<BeamNodeDetails>();
+		for(int j=0;j<m;j++){
+			CombinedBeamSearch.listNodeDetails.add(new BeamNodeDetails());
+		}
+		
+		CombinedBeamSearch.getBestTree();
 		CombinedBeamSearch.root = CombinedBeamSearch.listNodeDetails.get(0).beam_node;
 		
 		path = curDir+"\\"+"test"+i+ext;

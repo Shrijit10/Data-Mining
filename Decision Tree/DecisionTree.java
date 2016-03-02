@@ -31,6 +31,9 @@ public class DecisionTree {
 	   criteria = measure;
    }
    
+   /*
+    * Below method returns the visited features
+    */
    public static LinkedHashSet<Integer> getVisitedFeatures(Set<Integer> setVisited, int parentFeature){
 	   Iterator<Integer> it = setVisited.iterator();
 	   LinkedHashSet<Integer> result = new LinkedHashSet<Integer>();
@@ -63,13 +66,16 @@ public class DecisionTree {
    	});
    }
    
+   /*
+    * Below method gets the class label with max number of records
+    */
    public static List<String> getClassLabel(int parentFeature, float st, float end, Set<Integer> setValidRecords){
-	   HashMap<String, Integer> hashLabel = new HashMap<String, Integer>(); // list label count for feature values less than split_pos
+	   HashMap<String, Integer> hashLabel = new HashMap<String, Integer>(); // hashmap with key as the class and the value as its count
 	   int records = hashData.size();
 	   int count = 0;
 	   
 	   for(String s : setLabels)
-		   hashLabel.put(s, 0);
+		   hashLabel.put(s, 0); 
 	   
 	   for(int i=1;i<=records;i++){
 		   float val = Float.parseFloat(hashData.get(i).get(parentFeature));
@@ -85,8 +91,8 @@ public class DecisionTree {
 	   
 	   for(Entry<String, Integer> e : hashLabel.entrySet()){
 		   if(e.getValue() > max_val){
-			   max_val = e.getValue();
-			   max_key = e.getKey();
+			   max_val = e.getValue();  // count of majority class label
+			   max_key = e.getKey();    // majority class label
 		   }
 	   }
 	   
@@ -96,6 +102,9 @@ public class DecisionTree {
 	   return result;
    }
    
+   /*
+    * Below method gets the valid records required for left and right traversal
+    */
    public static List<Set<Integer>> getValidRecords(List<String> list){
 	   Set<Integer> setLeft = new HashSet<Integer>();
 	   Set<Integer> setRight = new HashSet<Integer>();
@@ -174,6 +183,9 @@ public class DecisionTree {
        return gini;
    }
    
+   /*
+    * Below method determines if gini or info gain is to be used based on the user input
+    */
    public static float getBestMeasure(List<FeatureLabel> listFeatLabel, float split_val, String criteria){
 	   HashMap<String, Integer> hash1 = new HashMap<String, Integer>(); // list label count for feature values less than split_pos
 	   HashMap<String, Integer> hash2 = new HashMap<String, Integer>(); // list label count for feature values greater than split_pos
@@ -183,8 +195,6 @@ public class DecisionTree {
 		   hash1.put(s, 0);
 		   hash2.put(s, 0);
 	   }
-	   
-	   //System.out.println("Split Val: "+split_val);
 	   
 	   for(FeatureLabel fl : listFeatLabel){
 		  if(fl.feature_val <= split_val)
@@ -252,6 +262,10 @@ public class DecisionTree {
 	   return info_gain;
 	}
    
+   /*
+    * Below method gets the gini or info gain depending on the criteria set(input by the user).
+    * Also packs the best split value, split index, majority class label and returns to caller
+    */
    public static List<String> getGini(List<FeatureLabel> listFeatLabel){
 	   List<String> result = new ArrayList<String>();
 	   float measure = 0f;
@@ -284,9 +298,9 @@ public class DecisionTree {
 	   for(int i=1;i<listFeatLabel.size();i++){
 		   hashLabel.put(listFeatLabel.get(i).label, hashLabel.get(listFeatLabel.get(i).label)+1);
 		   
-		   if(!listFeatLabel.get(i).label.equals(prevLabel)){ //optimization to reduce no of comparisons to calculate gini
+		   if(!listFeatLabel.get(i).label.equals(prevLabel)){ //reduces no of comparisons to calculate gini/info gain
 			  split_val = (listFeatLabel.get(i).feature_val + prevFeatureVal)/2;
-			  measure = getBestMeasure(listFeatLabel, split_val, criteria);   // gets gini for a node in the feature (<= 97 >)
+			  measure = getBestMeasure(listFeatLabel, split_val, criteria); 
 			 
 			  if(criteria.equals("gini")){
 			    node_gini = measure;
@@ -341,15 +355,17 @@ public class DecisionTree {
 	   
    }
    
+   /*
+    * Below method computes the best split
+    */
    public static NodeDetails getBestSplit(HashMap<Integer, HashMap<Integer, String>> hashData, int parentFeature, 
 		                                  Set<Integer> setValidRecords, float st, float end, Set<Integer> setVisited, int depth){
-	   //List<String> result = new ArrayList<String>();
 	   List<String> temp_result = new ArrayList<String>();
 	   List<String> list_left_record_no = new ArrayList<String>();
 	   List<String> list_right_record_no = new ArrayList<String>();
 	   int records = hashData.size();
 	   int split_val_index = -1;
-	   int feature_index = 0;   // class label for parent node remaining
+	   int feature_index = 0;   
 	   float min = Integer.MAX_VALUE;
 	   float gini = 1f;
 	   float split_value = Float.MIN_VALUE;
@@ -384,7 +400,7 @@ public class DecisionTree {
 	    	
 	    	sortFeatureLabel(listFeatLabel);
 	    	
-	    	temp_result = getGini(listFeatLabel);   // gets gini for the given feature
+	    	temp_result = getGini(listFeatLabel);
 	    	gini = Float.parseFloat(temp_result.get(0));
 	    	
 	    	if(gini < min){
@@ -408,9 +424,9 @@ public class DecisionTree {
 	    		   
 	    		   for(FeatureLabel fl : listFeatLabel){
 	    			   if(fl.feature_val <= split_value)
-	    			      list_left_record_no.add(fl.record_no+"");
+	    			      list_left_record_no.add(fl.record_no+"");  // stores the record nos to the left of the split
 	    			   else
-	    				  list_right_record_no.add(fl.record_no+"");
+	    				  list_right_record_no.add(fl.record_no+""); // stores the record nos to the right of the split
 	    			}
 	    		}
 	    		else{
@@ -477,7 +493,7 @@ public class DecisionTree {
 	   Set<Integer> setRightValidRecords = list_sets.get(1);
 		  
 	   if(setLabels.contains(nd.class_label) || depth > depth_limit){
-	       new_node.label = nd.class_label;  // assign label based on st and end
+	       new_node.label = nd.class_label; 
 		   new_node.max_class_label = nd.max_class_label;
 		   new_node.max_class_count = nd.max_class_count;
 		   new_node.label_count = nd.label_count;
@@ -485,8 +501,8 @@ public class DecisionTree {
 		}
 	   else{
 			int feature_index = nd.feature_index; 
-		    node.featureIndex = feature_index; // child feature index
-		    node.featureValue = nd.split_value;  // child feature value
+		    node.featureIndex = feature_index; 
+		    node.featureValue = nd.split_value;
 		    node.label = nd.class_label; 
 		    node.st = nd.feature_left_st;
 		    node.end = nd.feature_right_end;
@@ -497,26 +513,14 @@ public class DecisionTree {
 		    setVisited.add(feature_index);
 		    depth++;
 		    
-		    //System.out.println("****************************************");
-		    //System.out.println("Before Left: Parent: "+parentFeature);
-		    //displayTree(node, null);
-		    
 		    node.left = decisionTree(hashData, setVisited, feature_index, setLeftValidRecords, nd.feature_left_st, 
 		    		                 nd.feature_left_end, new_node, depth);
 		    
 		    setVisited = getVisitedFeatures(setVisited, node.featureIndex);
 		    
-		    //System.out.println("****************************************");
-		    //System.out.println("After Left: Parent: "+parentFeature);
-		    //displayTree(node, null);
-		    
 		    new_node = new Node();
-		    node.right = decisionTree(hashData, setVisited, feature_index, setRightValidRecords, nd.feature_right_st/*Float.parseFloat(list.get(5))*/, 
-		    		                 nd.feature_right_end/*Float.parseFloat(list.get(6))*/, new_node, depth);
-		     
-		    //System.out.println("****************************************");
-		    //System.out.println("After Right: Parent: "+parentFeature);
-		    //displayTree(node, null);
+		    node.right = decisionTree(hashData, setVisited, feature_index, setRightValidRecords, nd.feature_right_st, 
+		    		                 nd.feature_right_end, new_node, depth);
 		    
 		    return node;
 		  }
@@ -537,43 +541,6 @@ public class DecisionTree {
 	   }
    }
 	
-   /*public static void main(String[] args) throws Exception{
-	   BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-	   System.out.println("Please enter 1 for Gini, 2 for Info Gain measure: ");
-	   
-	   String criteria = br.readLine();
-	   if(!criteria.equals("1") && !criteria.equals("2")){
-		   System.out.println("Invalid option...Aborting...");
-		   return;
-	   }
-	   
-	   if(criteria.equals("1"))
-	      criteria = "gini";
-	   else
-		  criteria = "info_gain";
-	   
-	   init(criteria);
-	   String fileName = curDir+"\\iris.csv";
-	   readDataset(fileName, false);
-	   
-	   Set<Integer> setVisited = new LinkedHashSet<Integer>();
-	   Set<Integer> setValidRecords = new HashSet<Integer>();
-	   
-	   for(int i=1;i<=hashData.size();i++){
-		   setValidRecords.add(i);
-	   }
-	   
-	   System.out.println("Decision Tree");
-	   root = decisionTree(hashData, setVisited, -1, setValidRecords, Float.MIN_VALUE, Float.MAX_VALUE, root, 0);
-	   
-	   FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\output.txt");
-	   displayTree(root, fw);
-	   fw.close();
-	   
-	   String test_file = "test6.csv";
-	   String path = curDir+"\\"+test_file;
-	   //evalTestFile(path);
-   }*/
 }
 
 class Node{

@@ -30,6 +30,9 @@ public class EvaluateDecisionTree {
 			                                        Float.MIN_VALUE, Float.MAX_VALUE, DecisionTree.root, 0);
   }
   
+  /*
+   * Below method predicts the class based on the tree and the test input provided 
+   */
   public static String predictClass(Node node, String[] temp){
 	   String predict_class = node.label; 
 	   
@@ -47,6 +50,9 @@ public class EvaluateDecisionTree {
 	    
 	}
   
+  /*
+   * Below methods reads the test file and gives the accuracy
+   */
   public static void evalTestFile(String file_name) throws Exception{
 	   BufferedReader br = new BufferedReader(new FileReader(file_name));
 	   String s="";
@@ -91,7 +97,7 @@ public class EvaluateDecisionTree {
 	 init(criteria); 
 	 int k = CrossValidation.k;
 	 
-	 String filename = "haberman.csv";  // change filenames to 10 different datasets
+	 String filename = "iris.csv";  // change filenames to 10 different datasets
 	 int pos = filename.lastIndexOf(".");
 	 String ext = filename.substring(pos);
 	 String path = curDir+"\\"+filename;
@@ -108,6 +114,7 @@ public class EvaluateDecisionTree {
 		DecisionTree.readDataset(path, false);
 		
 		System.out.println("Building tree");
+		DecisionTree.root = new Node();
 		buildDecisionTree();
 		
 		//DecisionTree.displayTree(DecisionTree.root, null);

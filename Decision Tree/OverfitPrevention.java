@@ -21,7 +21,7 @@ public class OverfitPrevention {
    static PNode proot;
    static int total_records;
    static Set<String> setLabels;
-   static HashMap<Integer, ROCObj> hashROC;
+   static HashMap<Integer, ROCObj> hashROC;  // stores the probability and the actual class label to generate ROC 
    static HashMap<Float, ROCAxesObj> hashROCAxes;
    static String pos_class;
    static String neg_class;
@@ -37,7 +37,7 @@ public class OverfitPrevention {
 	   total_records = DecisionTree.hashData.size();
 	}
    
-    public static void getROC(){
+    public static void getROC() throws Exception{
 	   List<ROCObj> listRoc = new ArrayList<ROCObj>();
 	   for(Entry<Integer, ROCObj> e : hashROC.entrySet()){
 		   listRoc.add(e.getValue());
@@ -127,11 +127,19 @@ public class OverfitPrevention {
 	   
    }
    
-   public static void displayListROC(List<ROCObj> listRoc){
+   public static void displayListROC(List<ROCObj> listRoc) throws Exception{
 	   System.out.println();
+	   System.out.println("Prediction Plot for ROC and Precision-Recall Curve");
+	   
+	   FileWriter fw = new FileWriter("prediction_plot_roc.csv");
+	   fw.write("Predictions, Label \n");
+	   
 	   for(int i=0;i<listRoc.size();i++){
+		   fw.write(listRoc.get(i).threshold+","+listRoc.get(i).actual_class+"\n");
 		   System.out.println("Instance: "+(i+1)+", Probability: "+listRoc.get(i).threshold+", Actual Class: "+listRoc.get(i).actual_class);
 	   }
+	   
+	   fw.close();
    }
    
    public static void displayHashROCAxes(){
@@ -141,6 +149,9 @@ public class OverfitPrevention {
 		}
    }
    
+   /*
+    * Below method builds the validation set
+    */
    public static void buildValidationSet(String path) throws Exception{
 	   BufferedReader br = new BufferedReader(new FileReader(path));
 	   HashMap<Integer, String> hash = new HashMap<Integer, String>();
@@ -193,6 +204,9 @@ public class OverfitPrevention {
 	   }
    }
    
+   /*
+    * Below method gives the majority class labels to internal nodes
+    */
    public static void refinePTree(PNode pnode){
 	   if(pnode == null)
 		   return;
@@ -207,6 +221,9 @@ public class OverfitPrevention {
 	   }
    }
    
+   /*
+    * Below method predicts the class given the test file
+    */
    public static PredictLabelObj predictLabel(PNode pnode, String[] temp){
 	   String predict_class = pnode.label; 
 	   float prob = -1f;
@@ -239,6 +256,9 @@ public class OverfitPrevention {
 	    
 	}
   
+   /*
+    * Below method calculates the tp,fp,tn and fn values
+    */
    public static void evalTestFile(String file_name, boolean roc_YN) throws Exception{
 	   BufferedReader br = new BufferedReader(new FileReader(file_name));
 	   String s="";
@@ -288,7 +308,9 @@ public class OverfitPrevention {
 	   
    }
    
-   
+   /*
+    * Below method evaluates the validation set and returns the error
+    */
    public static int evalValidationFile(String file_name, PNode pnode) throws Exception{
 	   BufferedReader br = new BufferedReader(new FileReader(file_name));
 	   String s="";
@@ -325,6 +347,9 @@ public class OverfitPrevention {
 				                           Float.MIN_VALUE, Float.MAX_VALUE, droot, 0);
    }
    
+   /*
+    * Below method builds the estimated tree 
+    */
    public static void buildETree(PNode pnode, Node node, Node parent, int direction){
 	   if(pnode == null)
 	     return;
@@ -354,6 +379,10 @@ public class OverfitPrevention {
 	   }
    }
    
+   /*
+    * Below method gets the misclassified record count and count of leaf nodes required to calculate 
+    * pessimistic value and MDL 
+    */
    public static MisclassifiedObj getEstimate(PNode pnode, MisclassifiedObj missObj){
 	   if(setLabels.contains(pnode.label)){
 		   missObj.leaf_count++;
@@ -376,6 +405,10 @@ public class OverfitPrevention {
 	   }
    }
 
+   /*
+    * Below method builds the tree using either pessimistic or MDL(based on input). The tree stops growing 
+    * once the current error exceeds the previous error. 
+    */
    public static void buildBestETree(Node node, String type) throws Exception{
 	   Queue<Node> queue = new LinkedList<Node>();
 	   PNode root = new PNode();
@@ -397,7 +430,6 @@ public class OverfitPrevention {
 	   prev_error = error;
        
        PNode prev_root = new PNode(root);
-	   //System.out.println("Error: "+error);
 	   
 	   while(!queue.isEmpty()){
 		   Node n = queue.remove();
@@ -421,7 +453,6 @@ public class OverfitPrevention {
 				              missObj.leaf_count * Math.log(missObj.leaf_count)/Math.log(2) + 
 				              missObj.misclassified_count * Math.log(missObj.record_count)/Math.log(2));  
 		   
-		   //System.out.println("Error: "+error);
 		   if(prev_error < error)
 		      break;
 		   
@@ -430,13 +461,14 @@ public class OverfitPrevention {
 		   
 	   }
 	  
-	  //System.out.println("************** PTree **********");
-	  proot = prev_root;
+	  proot = prev_root; // The previous tree is returned as it has lower error than current tree
 	  refinePTree(proot);
-	  //displayETree(proot, null);
 	   
    }
    
+   /*
+    * Below method builds the best tree using the validation set
+    */
    public static void buildBestVTree(Node node, String fileName) throws Exception{
 	   Queue<Node> queue = new LinkedList<Node>();
 	   PNode root = new PNode();
@@ -447,13 +479,10 @@ public class OverfitPrevention {
 	   queue.add(node);
 	   buildETree(root, node, null, -1);
 	   
-	   //PNode temp_pnode = new PNode(root);
-	   
 	   error = evalValidationFile(fileName, root);
 	   prev_error = error;
        
        PNode prev_root = new PNode(root);
-       //displayETree(prev_root, null);
 	   
 	   while(!queue.isEmpty()){
 		   Node n = queue.remove();
@@ -469,8 +498,6 @@ public class OverfitPrevention {
 		   }
 		   	   
 		   error = evalValidationFile(fileName, root);
-		   
-		   //System.out.println("Error: "+error);
 		   
 		   if(prev_error > error)
 			   count = 0;
@@ -490,10 +517,8 @@ public class OverfitPrevention {
 		   
 	   }
 	  
-	  //System.out.println("************** PTree **********");
-	  proot = prev_root;
-	  refinePTree(proot);
-	  //displayETree(proot, null);
+	  proot = prev_root;  // The previous tree is returned as it has lower error than current tree
+	  refinePTree(proot); // Assign majority class label to internal nodes
 	   
    }
 	   
