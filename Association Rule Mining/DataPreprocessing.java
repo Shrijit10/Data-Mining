@@ -1,15 +1,19 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 
 public class DataPreprocessing {
 	static String curDir;
 	static HashMap<Integer, LinkedHashMap<String, Integer>> hashCategory;
 	static HashMap<Integer, List<String>> hashData;
+	static HashMap<Integer, String> hashIndexToAttributes;
 	static int[][] data;
 	static int rows;
 	static int cols;
@@ -18,6 +22,7 @@ public class DataPreprocessing {
 		curDir = System.getProperty("user.dir");
 		hashCategory = new HashMap<Integer, LinkedHashMap<String, Integer>>();
 		hashData = new HashMap<Integer, List<String>>();
+		hashIndexToAttributes = new HashMap<Integer, String>();
 	}
 	
 	public static void buildHashCategory(String[] temp, int index){
@@ -59,6 +64,35 @@ public class DataPreprocessing {
 		}
 		
 		br.close();
+		
+	}
+	
+	public static void readAttributeData(String path, String sep){
+		try{
+		  BufferedReader br = new BufferedReader(new FileReader(path));
+		  String[] temp = br.readLine().split(sep);
+		  int count = -1;
+		  
+		  for(int i=0;i<hashCategory.size();i++){
+			  String prefix = temp[i].trim();
+			  LinkedHashMap<String, Integer> lhash = hashCategory.get(i);
+			  
+			  for(Entry<String, Integer> e : lhash.entrySet()){
+			     count++;
+			     hashIndexToAttributes.put(count, prefix+"-"+e.getKey());
+			  }
+		  }
+		  
+		}
+		catch(Exception e){
+			if(e.getClass().getName().equals("java.io.FileNotFoundException")){
+			   System.out.println("Attributes file not present in current working directory.");
+			   System.out.println("Output will contain indices of attributes(after discretization)...0 -> 1st attribute, 11 -> 12th attribute...");
+			   System.out.println();
+			}
+			else
+				System.out.println(e);
+		}
 		
 	}
 	
@@ -110,13 +144,17 @@ public class DataPreprocessing {
 	   }
    }
    
-   public static void displayData(){
+   public static void displayData() throws IOException{
+	   FileWriter fw = new FileWriter("C:\\Users\\Shrijit\\Desktop\\matrix.txt");
 	   for(int i=0;i<data.length;i++){
 		   for(int j=0;j<data[i].length;j++){
+			   fw.write(data[i][j]+" ");
 			   System.out.print(data[i][j]+" ");
 		   }
 		   System.out.println();
+		   fw.write("\n");
 	   }
+	   fw.close();
    }
 	
 	/*public static void main(String[] args) throws Exception{
